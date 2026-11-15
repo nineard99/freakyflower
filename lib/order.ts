@@ -11,7 +11,6 @@ export type OrderRequest = {
   pickup: string;
   film: boolean;
   lines: CartLine[];
-  designs: string[]; // รูปช่อ (data URL) รายการละรูป เรียงตาม lines
   slip: string; // รูปสลิป (data URL)
 };
 
@@ -20,7 +19,6 @@ export type OrderResponse = { ok: true; orderNo: string } | { ok: false; error: 
 // ขนาดสูงสุด (ความยาว data URL) — Vercel รับ request ได้ราว 4.5 MB ต่อครั้ง
 export const MAX_BODY = 4_000_000;
 const MAX_SLIP = 2_000_000;
-const MAX_DESIGN = 400_000;
 
 const IMAGE = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 export const PHONE = /^0\d{8,9}$/;
@@ -28,7 +26,7 @@ export const normalizePhone = (s: string) => s.replace(/[\s-]/g, '');
 
 export type ValidOrder = {
   name: string; phone: string; ig: string; pickup: string;
-  count: number; total: number; bouquet: string; designs: string[]; slip: string;
+  count: number; total: number; bouquet: string; slip: string;
 };
 
 // คืนข้อความ error (ภาษาไทย แสดงให้ลูกค้าได้) หรือออเดอร์ที่ผ่านการตรวจแล้ว
@@ -51,10 +49,6 @@ export function validateOrder(body: unknown): { error: string } | { order: Valid
   if (!lines.length) return { error: 'ยังไม่ได้เลือกช่อ' };
   if (lines.length !== raw.length || raw.length > CONFIG.maxLines) return { error: 'รายการช่อไม่ถูกต้อง รีเฟรชหน้าแล้วลองใหม่' };
 
-  const designs = Array.isArray(b.designs) ? b.designs : [];
-  if (designs.length !== lines.length || !designs.every((d) => typeof d === 'string' && d.length <= MAX_DESIGN && IMAGE.test(d))) {
-    return { error: 'รูปช่อไม่ถูกต้อง ลองใหม่อีกครั้ง' };
-  }
   const slip = str(b.slip);
   if (!IMAGE.test(slip)) return { error: 'แนบรูปสลิปการโอน' };
   if (slip.length > MAX_SLIP) return { error: 'รูปสลิปใหญ่เกินไป' };
@@ -66,7 +60,6 @@ export function validateOrder(body: unknown): { error: string } | { order: Valid
       count: cartCount(lines),
       total: resolved.reduce((a, r) => a + r.total, 0),
       bouquet: cartText(resolved),
-      designs: designs as string[],
       slip,
     },
     resolved,

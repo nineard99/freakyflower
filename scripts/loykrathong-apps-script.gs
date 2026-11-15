@@ -1,5 +1,6 @@
 /**
- * รับออเดอร์ Pre-order วันลอยกระทง → บันทึกลง Google Sheet + เก็บรูปช่อและสลิปใน Google Drive
+ * รับออเดอร์ Pre-order วันลอยกระทง → บันทึกลง Google Sheet + เก็บสลิปใน Google Drive
+ * (รูปช่อ = ลิงก์เปิดดูช่อแบบ 3D บนเว็บ ไม่ได้เก็บเป็นไฟล์)
  *
  * ติดตั้ง (ทำครั้งเดียว):
  * 1. สร้าง Google Sheet ใหม่ (ด้วยบัญชีร้าน) → เมนู Extensions → Apps Script → วางโค้ดนี้ทั้งไฟล์ → Save
@@ -7,7 +8,7 @@
  *    Property = ORDER_SECRET, Value = ค่าเดียวกับ ORDER_SECRET ใน .env.local / Vercel
  *    (ไม่ตั้ง = รับทุกออเดอร์ ใครรู้ URL ก็ยิงเข้า Sheet ได้ — ตั้งไว้เสมอ)
  * 3. กลับหน้า Editor → เลือกฟังก์ชัน setup ในแถบด้านบน → Run → Authorize
- *    setup จะสร้างแท็บ + หัวตาราง และโฟลเดอร์เก็บสลิป/รูปช่อไว้ข้าง Sheet ให้เอง แล้วบอกผลใน Execution log
+ *    setup จะสร้างแท็บ + หัวตาราง และโฟลเดอร์เก็บสลิปไว้ข้าง Sheet ให้เอง แล้วบอกผลใน Execution log
  *    (ไม่รัน setup ก็ได้ — ออเดอร์แรกจะสร้างโฟลเดอร์ให้เอง แต่รันไว้จะได้เช็กว่าตั้งค่าครบ)
  * 4. Deploy → New deployment → Web app
  *    - Execute as: Me   - Who has access: Anyone
@@ -17,7 +18,7 @@
  */
 
 const SHEET_NAME = 'ลอยกระทง';
-// โฟลเดอร์เก็บสลิปและรูปช่อ — สร้างอัตโนมัติข้าง Sheet แล้วจำ id ไว้ใน Script Property "FOLDER_ID"
+// โฟลเดอร์เก็บสลิป — สร้างอัตโนมัติข้าง Sheet แล้วจำ id ไว้ใน Script Property "FOLDER_ID"
 // (อยากใช้โฟลเดอร์ที่มีอยู่แล้ว: ใส่ id จาก URL drive.google.com/drive/folders/<id> ใน Script Property FOLDER_ID เอง)
 const FOLDER_NAME = 'freakyflower — สลิปและรูปช่อ (ลอยกระทง)';
 // เวลารับช่อ (วันที่ 24 พ.ย. วันเดียว) — ต้องตรงกับ PICKUP ใน lib/catalog.ts
@@ -25,8 +26,8 @@ const PICKUP_FROM = '14:00';
 const PICKUP_TO = '21:30';
 // ถ้ามี Sheet เดิมอยู่แล้ว: แทรกคอลัมน์ "เวลารับ" หลัง Instagram เองก่อน (หัวตารางสร้างอัตโนมัติเฉพาะ Sheet ว่าง)
 const MAX_DESIGNS = 8; // = CONFIG.maxLines ใน lib/catalog.ts
-const HEADERS = ['เลขออเดอร์', 'เวลา', 'ชื่อ', 'เบอร์โทร', 'Instagram', 'เวลารับ (24 พ.ย.)', 'ช่อ', 'ยอด (บาท)', 'รูปช่อ', 'สลิป', 'สถานะ', 'ดู 3D'];
-const VIEW_COL = HEADERS.indexOf('ดู 3D') + 1; // คอลัมน์ L — ต่อท้ายสุด Sheet เดิมไม่ต้องย้ายคอลัมน์
+const HEADERS = ['เลขออเดอร์', 'เวลา', 'ชื่อ', 'เบอร์โทร', 'Instagram', 'เวลารับ (24 พ.ย.)', 'ช่อ', 'ยอด (บาท)', 'รูปช่อ', 'สลิป', 'สถานะ'];
+const DESIGN_COL = HEADERS.indexOf('รูปช่อ') + 1;
 
 function doPost(e) {
   try {
@@ -41,12 +42,9 @@ function doPost(e) {
     const count = Math.max(1, Number(d.count) || 1);
     const total = Number(d.total) || 0;
     const slip = parseImage(d.slip);
-    // หลายช่อ: designs = [รูปช่อละรายการ] (เว็บรุ่นเก่าส่ง design รูปเดียว)
-    const designs = (Array.isArray(d.designs) ? d.designs : [d.design]).slice(0, MAX_DESIGNS).map(parseImage).filter(Boolean);
-    // ลิงก์ดูช่อ 3D รายการละลิงก์ (server ของเว็บสร้างให้) — รับเฉพาะ https
-    const views = (Array.isArray(d.views) ? d.views : []).slice(0, MAX_DESIGNS)
-      .filter((v) => v && /^https?:\/\/[^\s]+\/view#[A-Za-z0-9_-]+$/.test(String(v.url)))
-      .map((v) => ({ label: String(v.label || 'ดู 3D').slice(0, 80), url: String(v.url) }));
+    // รูปช่อ: ลิงก์ดูช่อ 3D รายการละลิงก์ (server ของเว็บสร้างให้)
+    const views = (Array.isArray(d.views) ? d.views : []).slice(0, MAX_DESIGNS).map(String)
+      .filter((u) => /^https?:\/\/[^\s]+\/view#[A-Za-z0-9_-]+$/.test(u));
     if (!name) throw new Error('missing name');
     if (!/^0\d{8,9}$/.test(phone)) throw new Error('invalid phone');
     if (!/^\d{2}:\d{2}$/.test(pickup) || pickup < PICKUP_FROM || pickup > PICKUP_TO) throw new Error('invalid pickup time');
@@ -70,10 +68,9 @@ function doPost(e) {
 
     const save = (img, suffix) => folder.createFile(Utilities.newBlob(Utilities.base64Decode(img.data), img.type, orderNo + '-' + suffix)).getUrl();
     const slipUrl = save(slip, 'slip');
-    const designUrls = designs.map((img, i) => save(img, 'bouquet-' + (i + 1))).join('\n');
 
-    sh.getRange(row, 3, 1, 9).setValues([[safe(name), "'" + phone, ig ? '@' + safe(ig) : '', pickup + ' น.', safe(count + ' ช่อ\n' + bouquet), total, designUrls, slipUrl, 'รอตรวจสลิป']]);
-    if (views.length) sh.getRange(row, VIEW_COL).setRichTextValue(viewLinks(views));
+    sh.getRange(row, 3, 1, 9).setValues([[safe(name), "'" + phone, ig ? '@' + safe(ig) : '', pickup + ' น.', safe(count + ' ช่อ\n' + bouquet), total, '', slipUrl, 'รอตรวจสลิป']]);
+    if (views.length) sh.getRange(row, DESIGN_COL).setRichTextValue(linkLines(views));
     return json({ ok: true, orderNo: orderNo });
   } catch (err) {
     return json({ ok: false, error: String(err && err.message || err) });
@@ -94,15 +91,13 @@ function setup() {
 
 function ensureHeaders(sh) {
   if (sh.getLastRow() === 0) sh.appendRow(HEADERS).setFrozenRows(1);
-  else if (!sh.getRange(1, VIEW_COL).getValue()) sh.getRange(1, VIEW_COL).setValue(HEADERS[VIEW_COL - 1]); // Sheet เดิม: เติมหัวคอลัมน์ใหม่
 }
 
-// หนึ่งเซลล์ หลายลิงก์ (บรรทัดละช่อ) — กดชื่อช่อแล้วเปิดหน้าดู 3D
-function viewLinks(views) {
-  const text = views.map((v) => v.label).join('\n');
-  const rt = SpreadsheetApp.newRichTextValue().setText(text);
+// หนึ่งเซลล์ หลายลิงก์ บรรทัดละช่อ (เรียงตามรายการในคอลัมน์ "ช่อ") — กดแล้วเปิดหน้าดู 3D
+function linkLines(urls) {
+  const rt = SpreadsheetApp.newRichTextValue().setText(urls.join('\n'));
   let at = 0;
-  views.forEach((v) => { rt.setLinkUrl(at, at + v.label.length, v.url); at += v.label.length + 1; });
+  urls.forEach((u) => { rt.setLinkUrl(at, at + u.length, u); at += u.length + 1; });
   return rt.build();
 }
 

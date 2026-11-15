@@ -88,7 +88,7 @@ export function OrderForm() {
 
     setSending(true);
     try {
-      const orderNo = await submitOrder({ name, phone, ig: v('ig'), pickup, film, lines, resolved, slip });
+      const orderNo = await submitOrder({ name, phone, ig: v('ig'), pickup, film, lines, slip });
       setPlaced({ orderNo, lines: resolved, total });
       clearCart();
       window.scrollTo({ top: 0 });

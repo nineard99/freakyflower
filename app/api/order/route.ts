@@ -23,12 +23,10 @@ export async function POST(request: Request) {
   const v = validateOrder(body);
   if ('error' in v) return reply({ ok: false, error: v.error }, 400);
 
-  // ลิงก์ดูช่อแบบ 3D รายการละลิงก์ (Apps Script ใส่ลงคอลัมน์ "ดู 3D")
+  // รูปช่อ = ลิงก์ดูช่อแบบ 3D รายการละลิงก์ เรียงตามรายการช่อ (Apps Script ใส่ลงคอลัมน์ "รูปช่อ")
   const origin = (process.env.SITE_URL || new URL(request.url).origin).replace(/\/+$/, '');
-  const views = await Promise.all(v.resolved.map(async (r, i) => ({
-    label: `${i + 1}) ${r.name} × ${r.line.qty}`,
-    url: `${origin}/view#${await encodeBouquet({ name: r.name, qty: r.line.qty, design: r.design })}`,
-  })));
+  const views = await Promise.all(v.resolved.map(async (r) =>
+    `${origin}/view#${await encodeBouquet({ name: r.name, qty: r.line.qty, design: r.design })}`));
 
   try {
     // Apps Script ตอบกลับด้วย redirect ไป googleusercontent — fetch ตาม redirect ให้เอง

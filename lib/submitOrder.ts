@@ -1,16 +1,13 @@
-import type { CartLine, ResolvedLine } from './cart';
-import { designToImage } from './exportImage';
+import type { CartLine } from './cart';
 import { shrinkImage } from './image';
 import type { OrderRequest, OrderResponse } from './order';
 
-type Input = { name: string; phone: string; ig: string; pickup: string; film: boolean; lines: CartLine[]; resolved: ResolvedLine[]; slip: File };
+type Input = { name: string; phone: string; ig: string; pickup: string; film: boolean; lines: CartLine[]; slip: File };
 
 // ส่งออเดอร์ไป /api/order (server ตรวจซ้ำและคำนวณยอดเอง) — คืนเลขออเดอร์ หรือ throw ข้อความที่แสดงให้ลูกค้าได้
-export async function submitOrder({ resolved, slip, ...rest }: Input): Promise<string> {
-  // วาดรูปทีละช่อ (มือถือไม่ค้าง) — รายการละหนึ่งรูป ไม่ใช่ช่อละรูป
-  const designs: string[] = [];
-  for (const r of resolved) designs.push(await designToImage(r.design));
-  const body: OrderRequest = { ...rest, designs, slip: await shrinkImage(slip) };
+// รูปช่อไม่ต้องส่ง — server สร้างลิงก์ดูช่อ 3D จากรายการช่อเอง
+export async function submitOrder({ slip, ...rest }: Input): Promise<string> {
+  const body: OrderRequest = { ...rest, slip: await shrinkImage(slip) };
 
   let data: OrderResponse;
   try {

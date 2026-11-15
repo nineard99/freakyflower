@@ -4,3 +4,7 @@ next-env.d.ts
 *.tsbuildinfo
 .DS_Store
 pnpm-lock.yaml
+
+# env (ค่าลับ) — commit ได้เฉพาะไฟล์ตัวอย่าง
+.env*
+!.env.example

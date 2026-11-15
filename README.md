@@ -1,11 +1,20 @@
 # freakyflower — Pre-order ช่อดอกไม้
 
-Next.js (App Router) · TypeScript · ออเดอร์ส่งเข้า Google Sheet ผ่าน Google Apps Script
+Next.js (App Router) · TypeScript · ออเดอร์ส่งเข้า `/api/order` ของเรา (ตรวจ + คำนวณยอดฝั่ง server) → Google Apps Script → Google Sheet
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000
+cp .env.example .env.local   # ใส่ APPS_SCRIPT_URL และ ORDER_SECRET
+npm run dev                  # http://localhost:3000
 ```
+
+## env (ค่าฝั่ง server — ห้ามใส่ NEXT_PUBLIC_)
+| ชื่อ | ค่า |
+| --- | --- |
+| `APPS_SCRIPT_URL` | Web app URL ของ Apps Script (ลงท้าย `/exec`) |
+| `ORDER_SECRET` | รหัสลับ (`openssl rand -hex 24`) — ต้องตรงกับ Script Property `ORDER_SECRET` ใน Apps Script |
+
+ใส่ใน `.env.local` (ไม่ขึ้น git) และ Vercel → Project Settings → Environment Variables (แก้แล้วต้อง Redeploy) · ไม่ได้ตั้ง = ฟอร์มแจ้งลูกค้าว่าร้านยังไม่เปิดรับออเดอร์
 
 ## แก้ข้อมูลร้าน
 ทุกอย่างอยู่ที่ `lib/catalog.ts` — ราคา, ดอกไม้/สี, กระดาษ (`PAPERS`)/ริบบิ้น, ค่าห่อ (`WRAP_PRICE`), ค่าฟิล์มใส (`FILM_PRICE`), แบบสำเร็จ (`TEMPLATES`), LINE/เบอร์โทร (`CONFIG`), วัน/เวลารับช่อ (`PICKUP`), ตั้งค่าฟอร์ม (`LOYKRATHONG`)
@@ -14,7 +23,7 @@ npm run dev     # http://localhost:3000
 หน้าแรกเป็นฟอร์มยาวหน้าเดียว: 1 เลือกช่อ (การ์ดแบบสำเร็จ + “จัดวางเอง” + “ให้ร้านจัดให้” ในกริดเดียวกัน, เริ่มต้นยังไม่เลือก) → 2 ชื่อ / เบอร์โทร / IG (ไม่บังคับ) / เวลามารับ / ห่อฟิล์มใส → 3 สแกน QR โอนตามยอด → 4 แนบสลิป
 ออเดอร์เข้า Google Sheet (เวลารับ, รายการช่อ, ยอด, ลิงก์รูปช่อ, ลิงก์สลิป) — รูปเก็บใน Google Drive · รับช่อที่หน้าร้านวันงาน
 1. ตั้ง Google Apps Script ตามขั้นตอนหัวไฟล์ `scripts/loykrathong-apps-script.gs`
-2. ใส่ Web app URL ที่ `LOYKRATHONG.endpoint` ใน `lib/catalog.ts` (แก้หัวข้อ/ข้อความ/ชื่อบัญชีที่เดียวกัน)
+2. ใส่ Web app URL ที่ `APPS_SCRIPT_URL` และรหัสลับที่ `ORDER_SECRET` (ดูหัวข้อ env) — หัวข้อ/ข้อความ/ชื่อบัญชีแก้ที่ `LOYKRATHONG` ใน `lib/catalog.ts`
 3. วางรูป QR ชำระเงินที่ `public/loykrathong-qr.png`
 4. ทำ QR code ของลิงก์เว็บไปติดหน้าร้าน
 
@@ -22,7 +31,7 @@ npm run dev     # http://localhost:3000
 - **ฟิล์มใส**: ติ๊ก “ห่อฟิล์มใสทับกระดาษ” ได้กับทุกแบบและทุกกระดาษ (ติ๊กได้ทั้งในฟอร์ม หน้าจัดวางเอง และให้ร้านจัดให้ — เป็นค่าเดียวกัน) · คิดเงินเพิ่มได้ที่ `FILM_PRICE` (0 = ไม่คิดเพิ่ม)
 - **แบบสำเร็จแก้ต่อได้**: ปุ่ม “✎ ปรับแบบนี้เอง” ใต้การ์ดแบบสำเร็จ และแถว preset บนหน้าจัดวางเอง โหลดแบบใน `TEMPLATES` มาเป็นช่อจัดเองแล้วแก้ต่อ — เพิ่มแบบใน `TEMPLATES` = เพิ่มทั้งการ์ดและ preset
 
-> ยอดใน Sheet คำนวณจากหน้าเว็บ — เทียบกับยอดในสลิปทุกครั้งก่อนเปลี่ยนสถานะ
+> ยอดใน Sheet คำนวณใหม่ฝั่ง server จากรายการช่อ (ลูกค้าแก้ตัวเลขเองไม่ได้) — แต่ยังต้องเทียบกับยอดในสลิปทุกครั้งก่อนเปลี่ยนสถานะ
 
 ## ประเภท/ขนาดดอก
 ร้านขาย 7 ชนิด: กุหลาบ ทานตะวัน เยอบีร่า คาร์เนชัน (ดอกหลัก) · ยิปโซ สแตติส เดซี่ (ดอกรอง)
@@ -53,5 +62,5 @@ npm run dev     # http://localhost:3000
 - `components/Bouquet3D.tsx` + `lib/scene3d.ts` — พื้นที่จัดช่อโหมด 3D (three.js โหลดเฉพาะตอนเปิดโหมดนี้)
 - `lib/flowers3d.ts` — โมเดลหัวดอกไม้ 3D ทั้ง 7 ชนิด (สร้างจากสูตร ไม่มีไฟล์โมเดล ใช้สีจาก `colors[].hex` ใน catalog)
 - `components/OrderForm.tsx` — ฟอร์ม pre-order หน้าแรก (ช่อ → ข้อมูล → QR → สลิป) ส่งเข้า Apps Script
-- `lib/wrap.ts` — วาดช่อแบบเหมือนจริง (SVG): กระดาษหนังสือพิมพ์/สีพื้น + ฟิล์มใส (`design.film`) ขยายตามดอกไม้, ก้าน+ใบตามชนิดดอก (กลีบเลี้ยง หนามกุหลาบ ใบหัวใจทานตะวัน ฯลฯ) รวบที่ริบบิ้น, โบว์ซาติน · `lib/exportPng.ts` — สร้างรูปช่อเป็น PNG
+- `lib/wrap.ts` — วาดช่อแบบเหมือนจริง (SVG): กระดาษหนังสือพิมพ์/สีพื้น + ฟิล์มใส (`design.film`) ขยายตามดอกไม้, ก้าน+ใบตามชนิดดอก (กลีบเลี้ยง หนามกุหลาบ ใบหัวใจทานตะวัน ฯลฯ) รวบที่ริบบิ้น, โบว์ซาติน · `lib/exportImage.ts` — สร้างรูปช่อ (JPEG) ส่งไปกับออเดอร์
 # freakyflower

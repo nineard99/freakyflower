@@ -5,10 +5,13 @@
  * 1. สร้าง Google Sheet ใหม่ → เมนู Extensions → Apps Script → วางโค้ดนี้ทั้งไฟล์
  * 2. (แนะนำ) สร้างโฟลเดอร์ใน Drive สำหรับสลิป แล้วเอา id จาก URL มาใส่ FOLDER_ID
  *    เช่น drive.google.com/drive/folders/<FOLDER_ID>
- * 3. Deploy → New deployment → Web app
+ * 3. ตั้งรหัสลับ: Project Settings (รูปเฟือง) → Script Properties → Add script property
+ *    Property = ORDER_SECRET, Value = ค่าเดียวกับ ORDER_SECRET ใน .env.local / Vercel
+ *    (ไม่ตั้ง = รับทุกออเดอร์ ใครรู้ URL ก็ยิงเข้า Sheet ได้ — ตั้งไว้เสมอ)
+ * 4. Deploy → New deployment → Web app
  *    - Execute as: Me   - Who has access: Anyone
  *    กด Authorize แล้วคัดลอก Web app URL (ลงท้าย /exec)
- * 4. ใส่ URL ที่ LOYKRATHONG.endpoint ใน lib/catalog.ts
+ * 5. ใส่ URL ที่ APPS_SCRIPT_URL ใน .env.local และ Vercel (หน้าเว็บส่งออเดอร์ผ่าน /api/order ของเรา ไม่ได้ยิงมาที่นี่ตรงๆ)
  * แก้โค้ดนี้ทีหลัง ต้อง Deploy → Manage deployments → Edit → New version (URL เดิม)
  */
 
@@ -24,6 +27,8 @@ const HEADERS = ['เลขออเดอร์', 'เวลา', 'ชื่อ
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
+    const secret = PropertiesService.getScriptProperties().getProperty('ORDER_SECRET');
+    if (secret && d.secret !== secret) throw new Error('unauthorized');
     const name = String(d.name || '').trim().slice(0, 100);
     const phone = String(d.phone || '').replace(/[\s-]/g, '');
     const ig = String(d.ig || '').trim().replace(/^@+/, '').slice(0, 60);

@@ -32,7 +32,7 @@ export const LOYKRATHONG = {
   detail: 'เลือกช่อ กรอกข้อมูล โอนตาม QR แล้วแนบสลิป ร้านจัดช่อให้พร้อมรับตามเวลาที่เลือก', // วัน เวลา สถานที่รับ แสดงจาก PICKUP
   qrImage: '/loykrathong-qr.png', // วางรูป QR ชำระเงินที่ public/loykrathong-qr.png
   accountName: '', // TODO: ชื่อบัญชีที่แสดงใต้ QR (ไม่ใส่ก็ได้)
-  endpoint: '', // TODO: URL Web app ของ Google Apps Script (ดู scripts/loykrathong-apps-script.gs)
+  // URL ระบบรับออเดอร์ (Apps Script) อยู่ใน env: APPS_SCRIPT_URL — ดู .env.example
 };
 
 export type FlowerColor = { id: string; name: string; hex: string };

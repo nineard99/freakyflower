@@ -61,6 +61,9 @@ export type Flower = {
   size: number; // ขนาดจริงในช่อ (ล็อก ลูกค้าปรับไม่ได้) — 1 = กว้างราว 100px บนพื้นที่ 400×520
   stem: StemKind;
   colors: FlowerColor[];
+  /** รูปที่ถ่ายมาแนวนอน (ก้านไม่ได้อยู่ล่างกลาง): base = จุดโคนกิ่งในรูป (0–100) · turn = องศาที่หมุนให้กิ่งชี้ขึ้น
+      ภาพ 2D จะหมุนรูปแล้ววางโคนกิ่งไว้ที่ปลายก้านพอดี */
+  head?: { base: [number, number]; turn: number };
 };
 
 const c = (id: string, name: string, hex: string): FlowerColor => ({ id, name, hex });
@@ -81,7 +84,7 @@ export const FLOWERS: Record<string, Flower> = {
     colors: [c('pink', 'ชมพู', '#f28fb0'), c('red', 'แดง', '#b81d2c'), c('white', 'ขาวขอบชมพู', '#f7e9ee')],
   },
 
-  gypsophila: { name: 'ยิปโซ', en: "Baby's breath", price: 40, unit: 'กำ', role: 'filler', size: 0.95, stem: 'spray', colors: [c('white', 'ขาว', '#ffffff')] },
+  gypsophila: { name: 'ยิปโซ', en: "Baby's breath", price: 40, unit: 'กำ', role: 'filler', size: 0.95, stem: 'spray', head: { base: [9, 69], turn: -72 }, colors: [c('white', 'ขาว', '#ffffff')] },
   statice: { name: 'สแตติส', en: 'Statice', price: 35, unit: 'กำ', role: 'filler', size: 0.75, stem: 'spray', colors: [c('purple', 'ม่วง', '#7a62c9'), c('white', 'ขาว', '#eeeaf0')] },
   daisy: { name: 'เดซี่', en: 'Daisy', price: 35, unit: 'ดอก', role: 'filler', size: 0.6, stem: 'gerbera', colors: [c('white', 'ขาว', '#ffffff')] },
 };

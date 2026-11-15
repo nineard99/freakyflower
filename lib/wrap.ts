@@ -174,6 +174,9 @@ export const TONE: Record<StemKind, Tone> = {
 };
 export const WIDTH: Record<StemKind, number> = { rose: 5, sunflower: 8, carnation: 4, gerbera: 5, spray: 2.6 };
 
+// ระยะจากกลางหัวดอกถึงโคน (หน่วยก่อน scale)
+const STEM_D = { spray: 46, other: 34 };
+
 type Pt = { x: number; y: number };
 const qAt = (a: Pt, c: Pt, b: Pt, t: number): Pt => ({
   x: (1 - t) ** 2 * a.x + 2 * (1 - t) * t * c.x + t * t * b.x,
@@ -215,7 +218,7 @@ function stem(it: Item, i: number, uid: string) {
   if (!f) return '';
   const z = sizeOf(it.type), kind = f.stem;
   const rad = (it.r * Math.PI) / 180;
-  const d = kind === 'spray' ? 46 * z : 34 * z; // จากกลางดอกถึงโคน
+  const d = (kind === 'spray' ? STEM_D.spray : STEM_D.other) * z; // จากกลางดอกถึงโคน (ตรงกับ itemTransform)
   const a: Pt = { x: it.x - Math.sin(rad) * d, y: it.y + Math.cos(rad) * d };
   const b: Pt = { x: TIE.x + Math.max(-9, Math.min(9, (it.x - TIE.x) * 0.1)), y: TIE.y + 4 };
   const c: Pt = { x: (a.x + b.x) / 2 + (a.x - b.x) * 0.1, y: (a.y + b.y) / 2 };
@@ -271,9 +274,14 @@ export function stemsLayer(uid: string, d: Design) {
   return d.items.map((it, i) => stem(it, i, uid)).join('');
 }
 
-/* ---------- หัวดอก ---------- */
-export const itemTransform = (it: Item) =>
-  `translate(${f1(it.x)} ${f1(it.y)}) rotate(${it.r}) scale(${sizeOf(it.type)}) translate(-50 -50)`;
+/* ---------- หัวดอก ----------
+   ปกติ: กลางรูปอยู่ที่ (it.x, it.y) · รูปที่มี head (เช่น ยิปโซถ่ายแนวนอน): หมุนรูปให้กิ่งชี้ขึ้น แล้ววางโคนกิ่งไว้ที่ปลายก้าน */
+export const itemTransform = (it: Item) => {
+  const base = `translate(${f1(it.x)} ${f1(it.y)}) rotate(${it.r}) scale(${sizeOf(it.type)})`;
+  const h = FLOWERS[it.type]?.head;
+  if (!h) return `${base} translate(-50 -50)`;
+  return `${base} translate(0 ${STEM_D.spray}) rotate(${h.turn}) translate(${-h.base[0]} ${-h.base[1]})`;
+};
 
 /* ---------- ทั้งช่อ (ใช้ตอน export) ---------- */
 export function bouquetMarkup(d: Design, uid: string, href: (it: Item) => string) {

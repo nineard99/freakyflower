@@ -106,7 +106,7 @@ export function Builder({ onClose }: { onClose: () => void }) {
     <PickerShell
       tool title="จัดช่อเอง" onClose={onClose}
       meta={`${count} ชิ้น · ${baht(summarize(design).total)}`}
-      actions={<ThermalButton size="s" icon="check" onClick={onClose} disabled={!count} still={!!dialog}>ใช้ช่อนี้</ThermalButton>}
+      actions={<ThermalButton size="s" icon="check" onClick={b.commitDraft} disabled={!count || (!b.editing?.lineId && b.linesFull)} still={!!dialog}>{b.editing?.lineId ? 'บันทึกช่อนี้' : 'เพิ่มลงออเดอร์'}</ThermalButton>}
     >
       <div className="tool">
         {/* คลังดอกไม้ */}

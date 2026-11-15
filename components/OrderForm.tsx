@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { baht, CONFIG, LOYKRATHONG, PICKUP, PICKUP_SLOTS, summarize, templateDesign, TEMPLATES, wrapLabel, type Design } from '@/lib/catalog';
+import { cartCount, cartText, resolveLines, type ResolvedLine } from '@/lib/cart';
+import { baht, CONFIG, LOYKRATHONG, PICKUP, PICKUP_SLOTS, summarize, templateDesign, TEMPLATES, wrapLabel } from '@/lib/catalog';
 import { designToPng } from '@/lib/exportPng';
 import { BouquetChoices } from './BouquetChoices';
 import { Builder } from './Builder';
@@ -12,6 +13,7 @@ import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
 import { Summary } from './Summary';
 import { ThermalButton } from './ThermalButton';
+import { TimeSelect } from './TimeSelect';
 import { Alert, useConfirm } from './ui';
 
 // ย่อรูปสลิปก่อนส่ง (กันไฟล์ใหญ่จากกล้องมือถือ) → JPEG data URL
@@ -65,14 +67,6 @@ const PETALS = Array.from({ length: 18 }, (_, i) => ({
   hue: ['#f4b6c8', '#e98aa8', '#f7d27a', '#fbfaf6', '#d9b8ef'][i % 5],
 }));
 
-function bouquetText(d: Design, name: string) {
-  const sum = summarize(d);
-  return [
-    `${name} · ${wrapLabel(d)}`,
-    ...sum.lines.map((l) => `- ${l.label} × ${l.qty} ${l.unit}`),
-  ].join('\n');
-}
-
 const fileSize = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
@@ -87,9 +81,8 @@ const STEPS = 3;
 const FROM_PRICE = Math.min(...TEMPLATES.map((t) => summarize(templateDesign(t)).total));
 
 export function OrderForm() {
-  const { choice, orderDesign, shop } = useBouquet();
-  const [picker, setPicker] = useState<'custom' | 'shop' | null>(null);
-  const closePicker = useCallback(() => setPicker(null), []);
+  const { lines, film, editing, closeDraft, clearCart } = useBouquet();
+  const picker = editing?.kind ?? null;
   const { confirm, dialog } = useConfirm();
   const doneRef = useRef<HTMLHeadingElement>(null);
   const qrRef = useRef<HTMLImageElement>(null);
@@ -103,12 +96,15 @@ export function OrderForm() {
   const [failure, setFailure] = useState(''); // ส่งแล้วไม่สำเร็จ (ไม่ใช่ข้อมูลไม่ครบ)
   const [sending, setSending] = useState(false);
   const [orderNo, setOrderNo] = useState('');
+  const [placed, setPlaced] = useState<{ lines: ResolvedLine[]; total: number } | null>(null); // ออเดอร์ที่ส่งแล้ว (ตะกร้าล้างหลังส่ง)
 
-  const total = useMemo(() => (orderDesign ? summarize(orderDesign).total : 0), [orderDesign]);
+  const resolved = useMemo(() => resolveLines(lines, film), [lines, film]);
+  const total = useMemo(() => resolved.reduce((a, r) => a + r.total, 0), [resolved]);
+  const count = cartCount(lines);
+  const hasOrder = lines.length > 0;
   const shown = useCountUp(total);
-  const name = choice === 'custom' ? 'จัดวางเอง' : choice === 'shop' ? 'ให้ร้านจัดให้' : TEMPLATES.find((t) => t.id === choice)?.name ?? '';
 
-  const done = [!!orderDesign, filled.name && filled.phone && !!pickup, !!orderDesign && !!slip];
+  const done = [hasOrder, filled.name && filled.phone && !!pickup, hasOrder && !!slip];
   const doneCount = done.filter(Boolean).length;
   const clearError = useCallback((f: Field) => setErrors((e) => {
     if (!(f in e)) return e;
@@ -130,7 +126,7 @@ export function OrderForm() {
     return () => URL.revokeObjectURL(url);
   }, [slip]);
 
-  useEffect(() => { if (orderDesign) clearError('choice'); }, [orderDesign, clearError]);
+  useEffect(() => { if (hasOrder) clearError('choice'); }, [hasOrder, clearError]);
 
   // วางไฟล์พลาดนอก dropzone → เบราว์เซอร์จะเปิดรูปแทนหน้านี้ ข้อมูลที่กรอกไว้หาย: กันไว้ทั้งหน้า
   useEffect(() => {
@@ -162,14 +158,14 @@ export function OrderForm() {
     setFailure('');
 
     const errs: Partial<Record<Field, string>> = {};
-    if (!orderDesign) errs.choice = 'ยังไม่ได้เลือกช่อ เลือกแบบในขั้นตอนที่ 1 ก่อน';
+    if (!hasOrder) errs.choice = 'ยังไม่ได้เลือกช่อ เลือกแบบในขั้นตอนที่ 1 ก่อน';
     if (!v('name')) errs.name = 'กรอกชื่อผู้สั่ง';
     if (!/^0\d{8,9}$/.test(phone)) errs.phone = 'เบอร์โทรไม่ถูกต้อง ใช้รูปแบบ 0812345678';
     if (!PICKUP_SLOTS.includes(pickup)) errs.pickup = `เลือกเวลามารับช่อ ระหว่าง ${PICKUP.from}–${PICKUP.to} น.`;
     if (!slip) errs.slip = 'แนบรูปสลิปการโอน';
     setErrors(errs);
     const first = FIELD_ORDER.find((f) => errs[f]);
-    if (first || !orderDesign || !slip) {
+    if (first || !hasOrder || !slip) {
       // พาไปที่ช่องแรกที่ยังไม่ผ่าน
       const el = first && form.querySelector<HTMLElement>(FIELD_TARGET[first]);
       el?.focus({ preventScroll: true });
@@ -180,6 +176,9 @@ export function OrderForm() {
 
     setSending(true);
     try {
+      // วาดรูปทีละช่อ (มือถือไม่ค้าง) — รายการละหนึ่งรูป ไม่ใช่ช่อละรูป
+      const designs: string[] = [];
+      for (const r of resolved) designs.push(await designToPng(r.design, 1.2));
       const res = await fetch(LOYKRATHONG.endpoint, {
         method: 'POST',
         // text/plain = simple request ไม่มี CORS preflight (Apps Script ไม่รองรับ OPTIONS)
@@ -188,15 +187,18 @@ export function OrderForm() {
           phone,
           ig: v('ig').replace(/^@+/, ''),
           pickup,
-          bouquet: bouquetText(orderDesign, name) + (choice === 'shop' && shop.note.trim() ? `\nโน้ต: ${shop.note.trim()}` : ''),
+          bouquet: cartText(resolved),
+          count,
           total,
-          design: await designToPng(orderDesign, 1.5),
+          designs,
           slip: await shrinkImage(slip),
         }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
+      setPlaced({ lines: resolved, total });
       setOrderNo(data.orderNo);
+      clearCart();
       window.scrollTo({ top: 0 });
     } catch {
       setFailure('ส่งไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง LINE');
@@ -222,7 +224,8 @@ export function OrderForm() {
     </header>
   );
 
-  if (orderNo) {
+  if (orderNo && placed) {
+    const arts = placed.lines.slice(0, 4);
     return (
       <>
         {topbar}
@@ -243,11 +246,18 @@ export function OrderForm() {
               <strong className="num">{orderNo}</strong>
             </div>
             <div className="ticket__body">
-              {orderDesign && <div className="ticket__art"><BouquetSvg design={orderDesign} label="ช่อดอกไม้ที่สั่ง" /></div>}
+              <div className="ticket__arts" data-n={arts.length}>
+                {arts.map((r, i) => (
+                  <div key={r.line.id} className="ticket__art">
+                    <BouquetSvg design={r.design} label={r.name} />
+                    {i === 3 && placed.lines.length > 4 && <span className="ticket__more num">+{placed.lines.length - 4}</span>}
+                  </div>
+                ))}
+              </div>
               <dl className="ticket__facts">
-                <div><dt>ช่อ</dt><dd>{name}</dd></div>
+                <div><dt>ช่อ</dt><dd><ul className="ticket__lines">{placed.lines.map((r) => <li key={r.line.id}>{r.name} <span className="num">× {r.line.qty}</span></li>)}</ul></dd></div>
                 <div><dt>รับช่อ</dt><dd className="num">{PICKUP.date} · {pickup} น.</dd></div>
-                <div><dt>ยอดชำระ</dt><dd className="num">{baht(total)}</dd></div>
+                <div><dt>ยอดชำระ</dt><dd className="num">{baht(placed.total)}</dd></div>
               </dl>
             </div>
             <p className="ticket__note">ร้านจะตรวจสลิปและติดต่อกลับทางเบอร์โทรที่ให้ไว้</p>
@@ -288,7 +298,9 @@ export function OrderForm() {
           className="order" onSubmit={onSubmit} noValidate
           onInput={(e) => {
             const f = e.currentTarget.elements as unknown as Record<string, HTMLInputElement>;
-            setFilled({ name: !!f.name?.value.trim(), phone: /^0\d{8,9}$/.test((f.phone?.value ?? '').replace(/[\s-]/g, '')) });
+            const next = { name: !!f.name?.value.trim(), phone: /^0\d{8,9}$/.test((f.phone?.value ?? '').replace(/[\s-]/g, '')) };
+            // ค่าเดิม → คืน object เดิม React จะไม่เรนเดอร์ทั้งฟอร์มใหม่ทุกตัวอักษร
+            setFilled((p) => (p.name === next.name && p.phone === next.phone ? p : next));
             const field = (e.target as HTMLInputElement).name;
             if (field === 'name' || field === 'phone') clearError(field);
           }}
@@ -298,10 +310,10 @@ export function OrderForm() {
               {stepBadge(1)}
               <header className="step__head">
                 <h2 id="step-1" className="step__title">เลือกช่อ</h2>
-                <p className="step__status num">{orderDesign ? `${name} · ${baht(total)}` : 'เลือกแบบสำเร็จ หรือออกแบบเอง'}</p>
+                <p className="step__status num">{hasOrder ? `${count} ช่อ · ${baht(total)}` : 'เลือกแบบสำเร็จ หรือออกแบบเอง'}</p>
               </header>
               <div className="step__body">
-                <BouquetChoices confirm={confirm} onCustom={() => setPicker('custom')} onShop={() => setPicker('shop')} />
+                <BouquetChoices confirm={confirm} />
                 {errors.choice && <p className="field__error"><Icon name="circle-alert" size={14} />{errors.choice}</p>}
                 <FilmToggle />
               </div>
@@ -334,23 +346,17 @@ export function OrderForm() {
                   <span className="field__label">Instagram <span className="field__opt">ไม่บังคับ</span></span>
                   <input id="loy-ig" className="input" name="ig" autoCapitalize="none" autoCorrect="off" placeholder="@yourname" />
                 </label>
-                <label className="field">
-                  <span className="field__label">เวลามารับ</span>
-                  <span className="select">
-                    <select
-                      id="loy-pickup" name="pickup" required value={pickup} data-empty={!pickup || undefined}
-                      aria-invalid={!!errors.pickup || undefined} aria-describedby={errors.pickup ? 'err-pickup' : 'hint-pickup'}
-                      onChange={(e) => { setPickup(e.target.value); clearError('pickup'); }}
-                    >
-                      <option value="">เลือกเวลา</option>
-                      {PICKUP_SLOTS.map((t) => <option key={t} value={t}>{t} น.</option>)}
-                    </select>
-                    <Icon name="chevron-down" size={18} />
-                  </span>
+                <div className="field">
+                  <span id="lbl-pickup" className="field__label">เวลามารับ</span>
+                  <TimeSelect
+                    id="loy-pickup" labelledBy="lbl-pickup" slots={PICKUP_SLOTS} value={pickup}
+                    invalid={!!errors.pickup} describedBy={errors.pickup ? 'err-pickup' : 'hint-pickup'}
+                    onChange={(t) => { setPickup(t); clearError('pickup'); }}
+                  />
                   {errors.pickup
                     ? <span id="err-pickup" className="field__error"><Icon name="circle-alert" size={14} />{errors.pickup}</span>
                     : <span id="hint-pickup" className="field__hint num">รับได้เฉพาะวันที่ {PICKUP.date} เวลา {PICKUP.from}–{PICKUP.to} น.</span>}
-                </label>
+                </div>
               </div>
             </section>
 
@@ -363,8 +369,8 @@ export function OrderForm() {
               <div className="step__body pay">
                 <div className="pay__amount">
                   <span className="stat__label">ยอดโอน</span>
-                  <strong className="stat__value num" data-empty={!orderDesign || undefined}>{orderDesign ? baht(shown) : '—'}</strong>
-                  {!orderDesign && <span className="field__hint">เลือกช่อในขั้นตอนที่ 1 เพื่อดูยอดโอน</span>}
+                  <strong className="stat__value num" data-empty={!hasOrder || undefined}>{hasOrder ? baht(shown) : '—'}</strong>
+                  {!hasOrder && <span className="field__hint">เลือกช่อในขั้นตอนที่ 1 เพื่อดูยอดโอน</span>}
                 </div>
                 <figure className="pay__qr">
                   {qrMissing ? (
@@ -414,16 +420,33 @@ export function OrderForm() {
 
           <aside className="rail enter" style={{ '--i': 4 } as React.CSSProperties} aria-label="สรุปคำสั่งจอง">
             <h2 className="rail__title">สรุปคำสั่งจอง</h2>
-            <div className="rail__bouquet">
-              <div className="rail__art">
-                {orderDesign ? <BouquetSvg key={choice} design={orderDesign} label={`ช่อ ${name}`} /> : <Icon name="flower" size={24} />}
+            {hasOrder ? (
+              <ul className="rail__lines">
+                {resolved.map((r) => (
+                  <li key={r.line.id} className="rail__line">
+                    <div className="rail__art rail__art--sm"><BouquetSvg design={r.design} label={r.name} /></div>
+                    <div className="rail__what">
+                      <p className="rail__name">{r.name} <span className="rail__qty num">× {r.line.qty}</span></p>
+                      <p className="rail__sub">{wrapLabel(r.design)}</p>
+                      <details className="rail__detail">
+                        <summary>รายการดอกไม้</summary>
+                        <Summary design={r.design} />
+                      </details>
+                    </div>
+                    <span className="rail__price num">{baht(r.total)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="rail__bouquet">
+                <div className="rail__art"><Icon name="flower" size={24} /></div>
+                <div className="rail__what">
+                  <p className="rail__name">ยังไม่ได้เลือกช่อ</p>
+                  <p className="rail__sub">เลือกแบบในขั้นตอนที่ 1</p>
+                </div>
               </div>
-              <div className="rail__what">
-                <p className="rail__name">{orderDesign ? name : 'ยังไม่ได้เลือกช่อ'}</p>
-                <p className="rail__sub">{orderDesign ? wrapLabel(orderDesign) : 'เลือกแบบในขั้นตอนที่ 1'}</p>
-              </div>
-            </div>
-            {orderDesign && <Summary design={orderDesign} />}
+            )}
+            {hasOrder && <div className="sum__total"><span>รวม {count} ช่อ</span><strong className="num">{baht(total)}</strong></div>}
             <dl className="rail__facts">
               <div><dt>รับช่อ</dt><dd className="num">{PICKUP.date} · {pickup ? `${pickup} น.` : 'ยังไม่เลือกเวลา'}</dd></div>
             </dl>
@@ -438,7 +461,7 @@ export function OrderForm() {
               type="submit" full icon="arrow-right" status={sending ? 'loading' : 'idle'} still={!!picker || !!dialog}
               intensity={0.25 + 0.25 * doneCount}
             >
-              {sending ? 'กำลังส่ง' : orderDesign ? `ยืนยันการจอง · ${baht(shown)}` : 'ยืนยันการจอง'}
+              {sending ? 'กำลังส่ง' : hasOrder ? `ยืนยันการจอง · ${baht(shown)}` : 'ยืนยันการจอง'}
             </ThermalButton>
             <p className="rail__note">ร้านจะตรวจสลิปและติดต่อกลับทางเบอร์โทรที่ให้ไว้</p>
           </aside>
@@ -446,8 +469,8 @@ export function OrderForm() {
       </main>
 
       {dialog}
-      {picker === 'custom' && <Builder onClose={closePicker} />}
-      {picker === 'shop' && <ShopPicker onClose={closePicker} />}
+      {picker === 'custom' && <Builder onClose={closeDraft} />}
+      {picker === 'shop' && <ShopPicker onClose={closeDraft} />}
     </>
   );
 }

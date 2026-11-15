@@ -18,42 +18,51 @@ const FOLDER_ID = ''; // ว่าง = เก็บที่ My Drive
 const PICKUP_FROM = '14:00';
 const PICKUP_TO = '21:30';
 // ถ้ามี Sheet เดิมอยู่แล้ว: แทรกคอลัมน์ "เวลารับ" หลัง Instagram เองก่อน (หัวตารางสร้างอัตโนมัติเฉพาะ Sheet ว่าง)
+const MAX_DESIGNS = 8; // = CONFIG.maxLines ใน lib/catalog.ts
 const HEADERS = ['เลขออเดอร์', 'เวลา', 'ชื่อ', 'เบอร์โทร', 'Instagram', 'เวลารับ (24 พ.ย.)', 'ช่อ', 'ยอด (บาท)', 'รูปช่อ', 'สลิป', 'สถานะ'];
 
 function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
   try {
     const d = JSON.parse(e.postData.contents);
     const name = String(d.name || '').trim().slice(0, 100);
     const phone = String(d.phone || '').replace(/[\s-]/g, '');
     const ig = String(d.ig || '').trim().replace(/^@+/, '').slice(0, 60);
     const pickup = String(d.pickup || '').trim();
-    const bouquet = String(d.bouquet || '').slice(0, 2000);
+    const bouquet = String(d.bouquet || '').slice(0, 4000);
+    const count = Math.max(1, Number(d.count) || 1);
     const total = Number(d.total) || 0;
     const slip = parseImage(d.slip);
-    const design = parseImage(d.design);
+    // หลายช่อ: designs = [รูปช่อละรายการ] (เว็บรุ่นเก่าส่ง design รูปเดียว)
+    const designs = (Array.isArray(d.designs) ? d.designs : [d.design]).slice(0, MAX_DESIGNS).map(parseImage).filter(Boolean);
     if (!name) throw new Error('missing name');
     if (!/^0\d{8,9}$/.test(phone)) throw new Error('invalid phone');
     if (!/^\d{2}:\d{2}$/.test(pickup) || pickup < PICKUP_FROM || pickup > PICKUP_TO) throw new Error('invalid pickup time');
     if (!slip) throw new Error('missing slip');
 
+    // จองแถว + เลขออเดอร์ใต้ lock สั้นๆ แล้วค่อยเซฟไฟล์ (เซฟหลายรูปใช้เวลา ไม่ให้ออเดอร์อื่นรอ lock นาน)
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
-    if (sh.getLastRow() === 0) sh.appendRow(HEADERS).setFrozenRows(1);
+    const lock = LockService.getScriptLock();
+    lock.waitLock(20000);
+    let row, orderNo;
+    try {
+      if (sh.getLastRow() === 0) sh.appendRow(HEADERS).setFrozenRows(1);
+      orderNo = 'LK-' + String(sh.getLastRow()).padStart(3, '0');
+      sh.appendRow([orderNo, new Date(), '', '', '', '', '', '', '', '', 'กำลังบันทึก']);
+      row = sh.getLastRow();
+    } finally {
+      lock.releaseLock();
+    }
 
-    const orderNo = 'LK-' + String(sh.getLastRow()).padStart(3, '0');
     const folder = FOLDER_ID ? DriveApp.getFolderById(FOLDER_ID) : DriveApp.getRootFolder();
     const save = (img, suffix) => folder.createFile(Utilities.newBlob(Utilities.base64Decode(img.data), img.type, orderNo + '-' + suffix)).getUrl();
     const slipUrl = save(slip, 'slip');
-    const designUrl = design ? save(design, 'bouquet') : '';
+    const designUrls = designs.map((img, i) => save(img, 'bouquet-' + (i + 1))).join('\n');
 
-    sh.appendRow([orderNo, new Date(), safe(name), "'" + phone, ig ? '@' + safe(ig) : '', pickup + ' น.', safe(bouquet), total, designUrl, slipUrl, 'รอตรวจสลิป']);
+    sh.getRange(row, 3, 1, 9).setValues([[safe(name), "'" + phone, ig ? '@' + safe(ig) : '', pickup + ' น.', safe(count + ' ช่อ\n' + bouquet), total, designUrls, slipUrl, 'รอตรวจสลิป']]);
     return json({ ok: true, orderNo: orderNo });
   } catch (err) {
     return json({ ok: false, error: String(err && err.message || err) });
-  } finally {
-    lock.releaseLock();
   }
 }
 

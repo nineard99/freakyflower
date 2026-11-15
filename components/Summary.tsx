@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { baht, summarize, wrapLabel, type Design } from '@/lib/catalog';
 
 // รายการในช่อ + ยอดรวม — ตัวเลขใช้ tabular figures ให้หลักตรงกัน
-export function Summary({ design }: { design: Design }) {
+export const Summary = memo(function Summary({ design }: { design: Design }) {
   const sum = summarize(design);
   return (
     <div className="sum">
@@ -27,4 +28,4 @@ export function Summary({ design }: { design: Design }) {
       <div className="sum__total"><span>รวม</span><strong className="num">{baht(sum.total)}</strong></div>
     </div>
   );
-}
+});

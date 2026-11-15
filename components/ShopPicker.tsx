@@ -13,7 +13,7 @@ import { Swatches } from './ui';
 
 // โหมด "ให้ร้านจัดให้": ลูกค้าเลือกชนิด สี จำนวน — ร้านเป็นคนจัดวางเอง
 export function ShopPicker({ onClose }: { onClose: () => void }) {
-  const { shop, shopDesign, setShop } = useBouquet();
+  const { shop, shopDesign, setShop, editing, linesFull, commitDraft } = useBouquet();
   const [active, setActive] = useState<Record<string, string>>({});
   const total = Object.values(shop.counts).reduce((a, n) => a + n, 0);
   const sum = summarize(shopDesign);
@@ -32,7 +32,7 @@ export function ShopPicker({ onClose }: { onClose: () => void }) {
     <PickerShell
       title="ให้ร้านจัดให้" onClose={onClose}
       meta={`${total} ชิ้น · ${baht(sum.total)}`}
-      actions={<ThermalButton size="s" icon="check" onClick={onClose} disabled={!total}>ใช้รายการนี้</ThermalButton>}
+      actions={<ThermalButton size="s" icon="check" onClick={commitDraft} disabled={!total || (!editing?.lineId && linesFull)}>{editing?.lineId ? 'บันทึกช่อนี้' : 'เพิ่มลงออเดอร์'}</ThermalButton>}
     >
       <div className="wrap shop">
         <aside className="shop__preview panel" aria-label="ภาพตัวอย่างช่อ">

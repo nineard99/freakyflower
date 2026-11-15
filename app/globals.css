@@ -147,7 +147,7 @@ img, svg { max-width: 100%; }
 .field__error { display: flex; align-items: flex-start; gap: var(--space-1); font: 400 12px/18px var(--font-body); color: var(--danger); animation: fade-in var(--dur) var(--ease); }
 .field__error .icon { margin-top: 2px; }
 
-.input, .select select {
+.input, .tsel__btn {
   width: 100%; height: var(--control-s); padding: 0 var(--space-4); border: var(--border-hairline) solid var(--edge);
   border-radius: var(--radius-pill); background: var(--paper-raised); color: var(--ink); font: 400 15px/26px var(--font-body);
   transition: border-color var(--dur-fast) var(--ease);
@@ -157,15 +157,40 @@ img, svg { max-width: 100%; }
   border-radius: var(--radius-box); background: var(--paper-raised); color: var(--ink); font: 400 15px/26px var(--font-body);
   resize: vertical; transition: border-color var(--dur-fast) var(--ease);
 }
-:is(.input, .select select, .textarea):hover, :is(.input, .select select, .textarea):focus-visible { border-color: var(--ink); }
-:is(.input, .select select)[aria-invalid="true"] { border-color: var(--danger); }
+:is(.input, .tsel__btn, .textarea):hover, :is(.input, .tsel__btn, .textarea):focus-visible { border-color: var(--ink); }
+:is(.input, .tsel__btn)[aria-invalid="true"] { border-color: var(--danger); }
 :is(.input, .textarea)::placeholder { color: var(--ink-muted); opacity: 1; }
-.select { position: relative; display: flex; align-items: center; }
-.select select { appearance: none; -webkit-appearance: none; padding-right: 44px; cursor: pointer; }
-.select select[data-empty] { color: var(--ink-muted); }
-.select .icon { position: absolute; right: 14px; pointer-events: none; }
+/* dropdown เวลา: ปุ่ม pill + แผงกล่อง 2px (แบน ไม่มีเงา) · ชิปเวลา = pill เลือกแล้ว = กลับสี ink */
+.tsel { position: relative; }
+/* แต่ละ step มี stacking context ของตัวเอง (animation .enter) — ยก step ที่แผงเปิดอยู่ขึ้นเหนือ step ถัดไป */
+.step:has(.tsel[data-open]) { position: relative; z-index: 2; }
+.tsel__btn { display: flex; align-items: center; gap: var(--space-3); padding-right: var(--space-4); text-align: left; cursor: pointer; }
+.tsel__btn > .icon:first-child { color: var(--ink-muted); }
+.tsel__value { flex: 1; min-width: 0; }
+.tsel__btn[data-empty] .tsel__value { color: var(--ink-muted); }
+.tsel__chev { color: var(--ink-muted); transition: opacity var(--dur-fast) var(--ease); }
+.tsel[data-open] .tsel__btn { border-color: var(--ink); }
+.tsel__panel {
+  position: absolute; z-index: 10; top: calc(100% + var(--space-2)); left: 0; right: 0; min-width: 280px;
+  display: grid; gap: var(--space-4); padding: var(--space-4); max-height: min(380px, 60dvh); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--paper-raised); border: var(--border-hairline) solid var(--ink); border-radius: var(--radius-box);
+  animation: fade-in var(--dur) var(--ease);
+}
+.tsel__panel:focus-visible { outline: none; }
+.tsel__group { display: grid; gap: var(--space-2); }
+.tsel__period { display: flex; justify-content: space-between; font: 500 12px/18px var(--font-body); color: var(--ink-muted); }
+.tsel__period .num { font-weight: 400; }
+.tsel__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.tsel__opt {
+  display: grid; place-items: center; height: var(--control-xs); border: var(--border-hairline) solid var(--line); border-radius: var(--radius-pill);
+  font: 500 14px/20px var(--font-body); cursor: pointer; user-select: none;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.tsel__opt[data-active] { border-color: var(--ink); background: var(--hover-wash); }
+.tsel__opt[aria-selected="true"] { background: var(--ink-fill); border-color: var(--ink-fill); color: var(--on-ink-fill); }
+@media (pointer: coarse) { .tsel__opt { height: var(--control-s); } }
 /* iOS ซูมหน้าเมื่อโฟกัสช่องที่ตัวอักษรเล็กกว่า 16px */
-@media (pointer: coarse) { .input, .select select, .textarea { font-size: 16px; } }
+@media (pointer: coarse) { .input, .tsel__btn, .textarea { font-size: 16px; } }
 
 /* checkbox: สี่เหลี่ยมมุม 2px ติ๊กแล้ว = ink fill */
 .check { display: inline-flex; align-items: flex-start; gap: var(--space-3); font-size: 14px; line-height: 22px; cursor: pointer; justify-self: start; }
@@ -354,6 +379,35 @@ img, svg { max-width: 100%; }
 .choice__check { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ink-fill); color: var(--on-ink-fill); opacity: 0; transition: opacity var(--dur) var(--ease); }
 .choice[aria-pressed="true"] .choice__check { opacity: 1; }
 .choice__edit { justify-self: start; }
+.choice-cell__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-2); }
+.choice-cell__foot .choice__edit { justify-self: auto; }
+.choice:disabled, .choice-row:disabled { opacity: .5; cursor: not-allowed; }
+.choice:disabled:hover, .choice-row:disabled:hover { border-color: var(--line); }
+.choice__check b { font: 600 12px/1 var(--font-body); }
+.choices__sub { font-weight: 400; opacity: .8; }
+.stepper--sm { height: 32px; }
+.stepper--sm button { width: 30px; height: 30px; }
+.stepper--sm span { min-width: 20px; font-size: 13px; }
+
+/* ช่อที่ออกแบบไว้ในออเดอร์: กล่อง 2px ต่อรายการ — จอแคบ ปุ่มลงไปอยู่ใต้ชื่อ */
+.cart { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.cart__line {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2); border: var(--border-hairline) solid var(--line); border-radius: var(--radius-box); background: var(--paper-raised);
+  animation: fade-in var(--dur) var(--ease);
+}
+.cart__art { display: block; border-radius: var(--radius-box); background: var(--paper); overflow: hidden; }
+.cart__art svg { display: block; width: 100%; aspect-ratio: 400 / 520; }
+.cart__text { display: grid; min-width: 0; }
+.cart__name { font: 500 14px/22px var(--font-body); }
+.cart__sub { font-size: 12px; line-height: 18px; color: var(--ink-muted); overflow-wrap: anywhere; }
+.cart__actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.cart__actions .stepper { margin-right: auto; }
+@media (min-width: 640px) {
+  .cart__line { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .cart__actions { grid-column: auto; }
+  .cart__actions .stepper { margin-right: var(--space-2); }
+}
 
 .choices__rows { display: grid; gap: var(--space-3); }
 .choice-row {
@@ -417,6 +471,17 @@ img, svg { max-width: 100%; }
 .rail__facts > div { display: flex; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-3); border-top: var(--border-hairline) solid var(--line); font-size: 13px; line-height: 20px; }
 .rail__facts dt { color: var(--ink-muted); }
 .rail__facts dd { font-weight: 500; text-align: right; }
+.rail__lines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.rail__line { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); }
+.rail__line + .rail__line { padding-top: var(--space-3); border-top: var(--border-hairline) solid var(--line); }
+.rail__art--sm { width: 52px; }
+.rail__line .rail__name { font-size: 14px; line-height: 22px; }
+.rail__qty { font: 400 13px/20px var(--font-body); color: var(--ink-muted); }
+.rail__price { font: 500 14px/22px var(--font-body); }
+.rail__detail { margin-top: var(--space-1); font-size: 12px; line-height: 18px; }
+.rail__detail summary { width: fit-content; color: var(--ink-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.rail__detail[open] summary { margin-bottom: var(--space-2); }
+.rail__detail .sum__total { display: none; }
 .rail__note { font-size: 12px; line-height: 18px; color: var(--ink-muted); text-align: center; }
 @media (min-width: 980px) {
   .order { grid-template-columns: minmax(0, 1fr) 360px; column-gap: var(--space-12); padding-bottom: var(--space-24); }
@@ -447,6 +512,11 @@ img, svg { max-width: 100%; }
 .ticket__no { display: grid; gap: var(--space-1); padding-block: var(--space-4); border-block: var(--border-hairline) solid var(--line); }
 .ticket__no strong { font: 600 clamp(32px, 9vw, 48px)/1.25 var(--font-display); letter-spacing: 0.02em; overflow-wrap: anywhere; }
 .ticket__body { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: var(--space-5); }
+.ticket__arts { display: grid; gap: var(--space-2); align-self: start; }
+.ticket__arts[data-n="2"], .ticket__arts[data-n="3"], .ticket__arts[data-n="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ticket__art { position: relative; }
+.ticket__more { position: absolute; inset: 0; display: grid; place-items: center; background: var(--scrim); color: var(--on-ink-fill); font: 600 18px/1 var(--font-display); }
+.ticket__lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .ticket__art { border: var(--border-hairline) solid var(--line); border-radius: var(--radius-box); background: var(--paper); overflow: hidden; }
 .ticket__art svg { display: block; width: 100%; aspect-ratio: 400 / 520; }
 .ticket__facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: 10px 0; border-top: var(--border-hairline) solid var(--line); }

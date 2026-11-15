@@ -7,6 +7,8 @@
 export const CONFIG = {
   shopName: 'freakyflower',
   maxItems: 45, // จำนวนชิ้นสูงสุดต่อช่อ
+  maxLines: 8, // จำนวนรายการ (แบบช่อ) สูงสุดต่อออเดอร์
+  maxQty: 10, // จำนวนช่อสูงสุดต่อรายการ
   lineId: '@onlyflower', // TODO: ใส่ LINE OA จริง
   phone: '08x-xxx-xxxx', // TODO: ใส่เบอร์จริง
 };

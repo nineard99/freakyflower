@@ -705,3 +705,10 @@ img, svg { max-width: 100%; }
   .stepper button { width: 42px; height: 42px; }
   .stepper span { min-width: 28px; }
 }
+
+/* ---------- หน้าดูช่อ 3D ของร้าน (/view) ---------- */
+.viewer { display: grid; gap: var(--space-3); padding-block: var(--space-6) var(--space-16); max-width: 640px; }
+.viewer__stage { height: min(70svh, 640px); }
+.viewer__msg { padding-block: var(--space-10); text-align: center; color: var(--ink-muted); }
+.viewer__sum { display: grid; gap: var(--space-3); margin-top: var(--space-4); padding-top: var(--space-4); border-top: var(--border-hairline) solid var(--line); }
+.viewer__title { font: 600 18px/28px var(--font-display); }

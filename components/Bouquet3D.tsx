@@ -10,14 +10,15 @@ type Props = {
   design: Design;
   selected: number | null;
   label?: string;
-  onSelect: (id: number | null) => void;
-  onMove: (id: number, x: number, y: number) => void;
+  readOnly?: boolean; // ดูอย่างเดียว: ลากที่ไหนก็หมุน
+  onSelect?: (id: number | null) => void;
+  onMove?: (id: number, x: number, y: number) => void;
   onFail: () => void; // เครื่องนี้เปิด WebGL ไม่ได้
 } & Pick<React.CanvasHTMLAttributes<HTMLCanvasElement>, 'onDragOver' | 'onDrop'>;
 
 // พื้นที่จัดช่อแบบ 3D — โหลด three.js เฉพาะตอนเปิดโหมดนี้ (ไม่ถ่วงหน้าแรก)
 export const Bouquet3D = forwardRef<Bouquet3DHandle, Props>(function Bouquet3D(
-  { design, selected, label, onSelect, onMove, onFail, ...rest }, ref,
+  { design, selected, label, readOnly, onSelect, onMove, onFail, ...rest }, ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<Scene3D | null>(null);
@@ -30,8 +31,9 @@ export const Bouquet3D = forwardRef<Bouquet3DHandle, Props>(function Bouquet3D(
       .then(({ createScene3D }) => {
         if (dead || !canvasRef.current) return;
         const scene = createScene3D(canvasRef.current, {
-          onSelect: (id) => latest.current.onSelect(id),
-          onMove: (id, x, y) => latest.current.onMove(id, x, y),
+          onSelect: (id) => latest.current.onSelect?.(id),
+          onMove: (id, x, y) => latest.current.onMove?.(id, x, y),
+          readOnly,
         });
         sceneRef.current = scene;
         scene.update(latest.current.design, latest.current.selected);

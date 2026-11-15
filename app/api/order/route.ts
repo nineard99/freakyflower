@@ -1,4 +1,5 @@
 import { MAX_BODY, validateOrder, type OrderResponse } from '@/lib/order';
+import { encodeBouquet } from '@/lib/shareDesign';
 
 // รับออเดอร์จากหน้าเว็บ → ตรวจ + คำนวณยอดใหม่ฝั่ง server → ส่งต่อ Google Apps Script (URL และรหัสลับอยู่ใน env ไม่หลุดไปหน้าเว็บ)
 // Apps Script เซฟรูปลง Drive หลายรูปใช้เวลาหลายวินาที
@@ -22,12 +23,19 @@ export async function POST(request: Request) {
   const v = validateOrder(body);
   if ('error' in v) return reply({ ok: false, error: v.error }, 400);
 
+  // ลิงก์ดูช่อแบบ 3D รายการละลิงก์ (Apps Script ใส่ลงคอลัมน์ "ดู 3D")
+  const origin = (process.env.SITE_URL || new URL(request.url).origin).replace(/\/+$/, '');
+  const views = await Promise.all(v.resolved.map(async (r, i) => ({
+    label: `${i + 1}) ${r.name} × ${r.line.qty}`,
+    url: `${origin}/view#${await encodeBouquet({ name: r.name, qty: r.line.qty, design: r.design })}`,
+  })));
+
   try {
     // Apps Script ตอบกลับด้วย redirect ไป googleusercontent — fetch ตาม redirect ให้เอง
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...v.order, secret }),
+      body: JSON.stringify({ ...v.order, views, secret }),
       redirect: 'follow',
       cache: 'no-store',
     });

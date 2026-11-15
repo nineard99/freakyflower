@@ -28,7 +28,8 @@ export type Scene3D = {
   resetView: () => void;
   dispose: () => void;
 };
-type Handlers = { onSelect: (id: number | null) => void; onMove: (id: number, x: number, y: number) => void };
+// readOnly = หน้าดูช่อของร้าน (/view): ลากตรงไหนก็หมุนกล้อง ไม่เลือก/ย้ายดอก
+type Handlers = { onSelect: (id: number | null) => void; onMove: (id: number, x: number, y: number) => void; readOnly?: boolean };
 
 /* ---------- textures ---------- */
 function newsTexture(base: string) {
@@ -379,7 +380,7 @@ export function createScene3D(canvas: HTMLCanvasElement, handlers: Handlers): Sc
       drag = null; orbit = null;
       return;
     }
-    const id = pick(e.clientX, e.clientY);
+    const id = handlers.readOnly ? null : pick(e.clientX, e.clientY);
     if (id !== null && design) {
       const it = design.items.find((x) => x.id === id)!;
       const hit = stagePoint(e.clientX, e.clientY);
@@ -392,7 +393,7 @@ export function createScene3D(canvas: HTMLCanvasElement, handlers: Handlers): Sc
   };
   const onMove = (e: PointerEvent) => {
     const prev = pointers.get(e.pointerId);
-    if (!prev) { canvas.style.cursor = pick(e.clientX, e.clientY) !== null ? 'grab' : ''; return; }
+    if (!prev) { canvas.style.cursor = !handlers.readOnly && pick(e.clientX, e.clientY) !== null ? 'grab' : ''; return; }
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2 && pinch) {
       const [p1, p2] = [...pointers.values()];

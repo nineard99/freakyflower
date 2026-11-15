@@ -1,4 +1,4 @@
-import { cartCount, cartText, resolveLines, sanitizeLines, type CartLine } from './cart';
+import { cartCount, cartText, resolveLines, sanitizeLines, type CartLine, type ResolvedLine } from './cart';
 import { CONFIG, PICKUP_SLOTS } from './catalog';
 
 /* ออเดอร์ที่หน้าเว็บส่งมา /api/order — server ตรวจทุกช่องและคำนวณยอดเงินเองจากรายการช่อ
@@ -32,7 +32,7 @@ export type ValidOrder = {
 };
 
 // คืนข้อความ error (ภาษาไทย แสดงให้ลูกค้าได้) หรือออเดอร์ที่ผ่านการตรวจแล้ว
-export function validateOrder(body: unknown): { error: string } | { order: ValidOrder } {
+export function validateOrder(body: unknown): { error: string } | { order: ValidOrder; resolved: ResolvedLine[] } {
   if (!body || typeof body !== 'object') return { error: 'ข้อมูลออเดอร์ไม่ถูกต้อง' };
   const b = body as Partial<Record<keyof OrderRequest, unknown>>;
   const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
@@ -69,5 +69,6 @@ export function validateOrder(body: unknown): { error: string } | { order: Valid
       designs: designs as string[],
       slip,
     },
+    resolved,
   };
 }

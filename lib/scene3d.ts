@@ -64,7 +64,7 @@ function ringTexture() {
   const cv = document.createElement('canvas');
   cv.width = cv.height = 256;
   const g = cv.getContext('2d')!;
-  g.strokeStyle = '#9b6fc4';
+  g.strokeStyle = '#151412'; // Thermal ink
   g.lineWidth = 5;
   g.setLineDash([16, 12]);
   g.beginPath();

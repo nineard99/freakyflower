@@ -1,21 +1,31 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { baht, flowerImg, FLOWERS, PAPERS, RIBBONS, ROLES, summarize, type Item, type Role } from '@/lib/catalog';
+import { baht, CONFIG, flowerImg, FLOWERS, PAPERS, RIBBONS, ROLES, summarize, templateDesign, TEMPLATES, type Item, type Role, type Template } from '@/lib/catalog';
 import { Bouquet3D, type Bouquet3DHandle } from './Bouquet3D';
 import { BouquetSvg } from './BouquetSvg';
 import { FilmToggle } from './FilmToggle';
 import { useBouquet } from './BouquetProvider';
+import { Icon } from './Icon';
+import { PickerShell } from './PickerShell';
 import { Summary } from './Summary';
+import { ThermalButton } from './ThermalButton';
+import { Seg, Swatches, useConfirm, useToast } from './ui';
 
 type View = '2d' | '3d';
+type Tab = Role | 'preset';
 const VIEW_KEY = 'onlyflower.view';
+const TABS: { value: Tab; label: string }[] = [...ROLES.map((r) => ({ value: r.id as Tab, label: r.name })), { value: 'preset', label: 'แบบสำเร็จ' }];
+const VIEWS: { value: View; label: string }[] = [{ value: '2d', label: '2D' }, { value: '3d', label: '3D' }];
 
-export function Builder({ onDone }: { onDone: () => void }) {
+// หน้าเต็มจอสำหรับจัดช่อเอง — โครง ToolShell ของ Thermal: คลังดอกไม้ · พื้นที่จัดช่อ (artboard) · inspector
+export function Builder({ onClose }: { onClose: () => void }) {
   const b = useBouquet();
   const { design, selected } = b;
   const svgRef = useRef<SVGSVGElement>(null);
   const threeRef = useRef<Bouquet3DHandle>(null);
+  const { confirm, dialog } = useConfirm();
+  const { toast, notify } = useToast();
   // มุมมองพื้นที่จัดช่อ: 2D (ภาพด้านหน้า) หรือ 3D (หมุนดูรอบช่อ) — สลับได้ตลอด ใช้ข้อมูลช่อชุดเดียวกัน
   const [view, setViewState] = useState<View>('2d');
   useEffect(() => {
@@ -27,8 +37,26 @@ export function Builder({ onDone }: { onDone: () => void }) {
   };
   const drag = useRef<{ id: number; dx: number; dy: number } | null>(null);
   const [pick, setPick] = useState<Record<string, string>>({});
-  const [role, setRole] = useState<Role>('main');
+  const [tab, setTab] = useState<Tab>('main');
   const sel = design.items.find((it) => it.id === selected);
+  const count = design.items.length;
+  const full = count >= CONFIG.maxItems;
+
+  const add = (type: string, color: string, x?: number, y?: number) => {
+    if (full) return notify(`ใส่ได้สูงสุด ${CONFIG.maxItems} ชิ้นต่อช่อ ลบบางดอกออกก่อนเพิ่มใหม่`);
+    b.addFlower(type, color, x, y);
+  };
+
+  // preset: โหลดแบบสำเร็จมาเป็นจุดเริ่ม แล้วแก้ต่อได้ทุกอย่าง (ย้าย / เพิ่ม / ลบดอก เปลี่ยนสี กระดาษ ริบบิ้น)
+  const loadPreset = (t: Template) => {
+    const go = () => b.replace(templateDesign(t));
+    if (!count) return go();
+    confirm({
+      title: `แทนที่ช่อที่จัดอยู่ด้วยแบบ “${t.name}”`,
+      body: 'ดอกไม้ที่จัดไว้ตอนนี้จะถูกแทนที่ และกู้คืนไม่ได้',
+      confirmLabel: 'แทนที่', danger: true, onConfirm: go,
+    });
+  };
 
   const toSvg = (clientX: number, clientY: number) => {
     const pt = new DOMPoint(clientX, clientY).matrixTransform(svgRef.current!.getScreenCTM()!.inverse());
@@ -58,13 +86,13 @@ export function Builder({ onDone }: { onDone: () => void }) {
     const [type, color] = e.dataTransfer.getData('text/plain').split('|');
     if (!FLOWERS[type]) return;
     const p = view === '3d' ? threeRef.current?.stagePoint(e.clientX, e.clientY) : toSvg(e.clientX, e.clientY);
-    b.addFlower(type, color, p?.x, p?.y);
+    add(type, color, p?.x, p?.y);
   };
 
   // คีย์บอร์ด: ลูกศรเลื่อน, Delete ลบ
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!sel || (e.target as Element).matches('input, textarea, select')) return;
+      if (!sel || (e.target as Element).matches('input, textarea, select') || document.querySelector('dialog[open]')) return;
       const step = e.shiftKey ? 10 : 3;
       const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
       if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); b.arrange(sel.id, 'del'); }
@@ -75,176 +103,210 @@ export function Builder({ onDone }: { onDone: () => void }) {
   }, [sel, b]);
 
   return (
-    <div className="builder">
-      {/* palette */}
-      <aside className="panel palette">
-        <div className="seg seg--block" role="tablist" aria-label="ประเภทดอกไม้">
-          {ROLES.map((r) => (
-            <button key={r.id} type="button" role="tab" aria-selected={role === r.id} className={role === r.id ? 'on' : ''} onClick={() => setRole(r.id)}>{r.name}</button>
-          ))}
-        </div>
-        <p className="palette__hint">{ROLES.find((r) => r.id === role)!.hint}</p>
-        <div className="palette__list" key={role}>
-          {Object.entries(FLOWERS).filter(([, f]) => f.role === role).map(([type, f]) => {
-            const color = pick[type] ?? f.colors[0].id;
-            const add = () => b.addFlower(type, color);
-            return (
-              <div
-                key={type} className="fl" draggable role="button" tabIndex={0} aria-label={`เพิ่ม${f.name}`}
-                onClick={add}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); add(); } }}
-                onDragStart={(e) => e.dataTransfer.setData('text/plain', `${type}|${color}`)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="fl__img" src={flowerImg(type, color)} alt="" draggable={false} />
-                <div className="fl__info">
-                  <span className="fl__name">{f.name}</span>
-                  <span className="fl__price">{baht(f.price)} / {f.unit}</span>
-                  {f.colors.length > 1 && (
-                    <span className="fl__colors">
-                      {f.colors.map((c) => (
-                        <button
-                          key={c.id} type="button" title={c.name} aria-label={c.name}
-                          className={`dot${c.id === color ? ' on' : ''}`}
-                          style={{ '--c': c.hex } as React.CSSProperties}
-                          onClick={(e) => { e.stopPropagation(); setPick((p) => ({ ...p, [type]: c.id })); }}
-                        />
-                      ))}
-                    </span>
-                  )}
-                </div>
-                <span className="fl__add" aria-hidden>+</span>
-              </div>
-            );
-          })}
-        </div>
-      </aside>
-
-      {/* stage */}
-      <div className="stage-wrap">
-        <div className="stage-bar">
-          <span className="muted">{design.items.length} ชิ้น · {baht(summarize(design).total)}</span>
-          <div className="seg" role="group" aria-label="มุมมองพื้นที่จัดช่อ">
-            {(['2d', '3d'] as const).map((v) => (
-              <button key={v} type="button" aria-pressed={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>{v.toUpperCase()}</button>
-            ))}
+    <PickerShell
+      tool title="จัดช่อเอง" onClose={onClose}
+      meta={`${count} ชิ้น · ${baht(summarize(design).total)}`}
+      actions={<ThermalButton size="s" icon="check" onClick={onClose} disabled={!count} still={!!dialog}>ใช้ช่อนี้</ThermalButton>}
+    >
+      <div className="tool">
+        {/* คลังดอกไม้ */}
+        <aside className="tool__library lib" aria-label="คลังดอกไม้">
+          <div className="lib__head">
+            <Seg label="ประเภทดอกไม้" options={TABS} value={tab} onChange={setTab} full compact />
+            <p className="lib__hint">
+              {tab === 'preset' ? 'เริ่มจากแบบสำเร็จ แล้วแก้ต่อได้ทุกอย่าง' : `${ROLES.find((r) => r.id === tab)!.hint} · แตะหรือลากมาใส่ช่อ`}
+            </p>
           </div>
-          <button
-            className="btn btn--ghost btn--sm" type="button"
-            onClick={() => { if (design.items.length && confirm('ล้างดอกไม้ทั้งหมดในช่อ?')) b.clear(); }}
-          >
-            ล้างทั้งหมด
-          </button>
-        </div>
-        <div className="stage">
-          {view === '3d' ? (
-            <>
-              <Bouquet3D
-                ref={threeRef} design={design} selected={selected} label="พื้นที่จัดช่อดอกไม้ แบบ 3D"
-                onSelect={b.setSelected} onMove={(id, x, y) => b.updateItem(id, { x, y })}
-                onFail={() => { setView('2d'); alert('อุปกรณ์นี้เปิดโหมด 3D ไม่ได้ — กลับไปใช้โหมด 2D'); }}
-                onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
-              />
-              <div className="stage__3d-bar">
-                <span>ลากที่ว่างเพื่อหมุนช่อ · ลากดอกเพื่อย้าย</span>
-                <button type="button" className="chip" onClick={() => threeRef.current?.resetView()}>↺ มุมเริ่มต้น</button>
-              </div>
-            </>
+          {tab === 'preset' ? (
+            <div className="lib__presets" key="preset">
+              {TEMPLATES.map((t) => (
+                <button key={t.id} type="button" className="preset" onClick={() => loadPreset(t)}>
+                  <BouquetSvg design={b.withFilm(templateDesign(t))} label="" aria-hidden />
+                  <span>{t.name}</span>
+                </button>
+              ))}
+            </div>
           ) : (
-            <BouquetSvg
-              ref={svgRef} design={design} selected={selected} label="พื้นที่จัดช่อดอกไม้"
-              onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-              onPointerUp={endDrag} onPointerCancel={endDrag}
-              onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
-            />
+            <div className="lib__list" key={tab}>
+              {Object.entries(FLOWERS).filter(([, f]) => f.role === tab).map(([type, f]) => {
+                const color = pick[type] ?? f.colors[0].id;
+                return (
+                  <div
+                    key={type} className="fl" draggable
+                    onClick={() => add(type, color)}
+                    onDragStart={(e) => e.dataTransfer.setData('text/plain', `${type}|${color}`)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className="fl__img" src={flowerImg(type, color)} alt="" draggable={false} />
+                    <div className="fl__info">
+                      <span className="fl__name">{f.name}</span>
+                      <span className="fl__price num">{baht(f.price)} / {f.unit}</span>
+                      {f.colors.length > 1 && (
+                        <Swatches
+                          small label={`สี${f.name}`} value={color}
+                          items={f.colors.map((c) => ({ key: c.id, name: c.name, color: c.hex }))}
+                          onChange={(id) => setPick((p) => ({ ...p, [type]: id }))}
+                        />
+                      )}
+                    </div>
+                    <button type="button" className="fl__add" aria-label={`เพิ่ม${f.name}`} onClick={(e) => { e.stopPropagation(); add(type, color); }}>
+                      <Icon name="plus" size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           )}
-          {!design.items.length && <p className="stage__empty">เลือกดอกไม้เพื่อเริ่มจัดช่อ ✿</p>}
-        </div>
-      </div>
+        </aside>
 
-      {/* options */}
-      <aside className="panel options">
-        <div className="opt-block">
-          <h3 className="panel__title">ดอกที่เลือก</h3>
-          {sel ? <SelectedTools it={sel} layers={view === '2d'} /> : <p className="muted">แตะดอกไม้ในช่อเพื่อแก้ไข</p>}
-        </div>
-
-        <div className="opt-block">
-          <h3 className="panel__title">กระดาษห่อ · {PAPERS[design.paper].name}</h3>
-          <div className="swatches swatches--lg">
-            {PAPERS.map((p, i) => (
+        {/* พื้นที่จัดช่อ: canvas well (paper-sunken) → artboard (paper-raised) */}
+        <section className="tool__canvas" aria-label="พื้นที่จัดช่อ">
+          <div className="canvas__head">
+            <span className="canvas__label num">{count}/{CONFIG.maxItems} ชิ้น</span>
+            <div className="canvas__tools">
+              <Seg label="มุมมองพื้นที่จัดช่อ" options={VIEWS} value={view} onChange={setView} compact />
               <button
-                key={p.name} type="button" title={p.name} aria-label={p.name}
-                className={`sw${p.kind === 'news' ? ' sw--news' : ''}${i === design.paper ? ' on' : ''}`}
-                style={{ '--c': p.color } as React.CSSProperties}
-                onClick={() => b.setPaper(i)}
-              />
-            ))}
+                className="btn btn--ghost btn--xs" type="button" disabled={!count}
+                onClick={() => confirm({
+                  title: 'ล้างดอกไม้ทั้งหมดในช่อ',
+                  body: 'ดอกไม้ทุกดอกจะถูกนำออก กระดาษห่อและริบบิ้นยังอยู่เหมือนเดิม',
+                  confirmLabel: 'ล้างทั้งหมด', danger: true, onConfirm: b.clear,
+                })}
+              >
+                ล้างทั้งหมด
+              </button>
+            </div>
           </div>
-          <FilmToggle />
-        </div>
-        <div className="opt-block">
-          <h3 className="panel__title">ริบบิ้น · {RIBBONS[design.ribbon][0]}</h3>
-          <Swatches list={RIBBONS} value={design.ribbon} onChange={b.setRibbon} />
-        </div>
 
-        <div className="opt-block">
-          <h3 className="panel__title">สรุปรายการ</h3>
-          <Summary design={design} />
-          <button type="button" className="btn btn--block" onClick={onDone} disabled={!design.items.length}>ใช้ช่อนี้</button>
-        </div>
-      </aside>
-    </div>
+          <div className="canvas__stage">
+            <div className="artboard">
+              {view === '3d' ? (
+                <Bouquet3D
+                  ref={threeRef} design={design} selected={selected} label="พื้นที่จัดช่อดอกไม้ แบบ 3D"
+                  onSelect={b.setSelected} onMove={(id, x, y) => b.updateItem(id, { x, y })}
+                  onFail={() => { setView('2d'); notify('อุปกรณ์นี้เปิดมุมมอง 3D ไม่ได้ กลับมาใช้ 2D แทน'); }}
+                  onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
+                />
+              ) : (
+                <BouquetSvg
+                  ref={svgRef} design={design} selected={selected} label="พื้นที่จัดช่อดอกไม้"
+                  onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+                  onPointerUp={endDrag} onPointerCancel={endDrag}
+                  onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
+                />
+              )}
+              {!count && (
+                <div className="artboard__empty">
+                  <p className="artboard__empty-title">เริ่มจัดช่อ</p>
+                  <p>แตะดอกไม้ในคลังเพื่อใส่ลงช่อ หรือเริ่มจากแบบสำเร็จ</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* แถบเครื่องมือของดอกที่เลือก — ไม่มีดอกที่เลือกก็บอกวิธีใช้แทน (ความสูงคงที่ จอไม่กระตุก) */}
+          <div className="canvas__dock">
+            {sel || view === '3d' ? (
+              <div className="toolbar" role="toolbar" aria-label={sel ? 'จัดการดอกที่เลือก' : 'มุมมอง 3D'}>
+                {view === '3d' && (
+                  <button type="button" className="btn btn--ghost btn--xs" onClick={() => threeRef.current?.resetView()}>
+                    <Icon name="rotate-ccw" size={16} />มุมเริ่มต้น
+                  </button>
+                )}
+                {sel && view === '3d' && <span className="toolbar__sep" />}
+                {sel && view === '2d' && (
+                  <>
+                    <button type="button" className="btn btn--ghost btn--xs" onClick={() => b.arrange(sel.id, 'front')}><Icon name="bring-to-front" size={16} />หน้าสุด</button>
+                    <button type="button" className="btn btn--ghost btn--xs" onClick={() => b.arrange(sel.id, 'back')}><Icon name="send-to-back" size={16} />หลังสุด</button>
+                    <span className="toolbar__sep" />
+                  </>
+                )}
+                {sel && (
+                  <>
+                    <button type="button" className="btn btn--ghost btn--xs" disabled={full} onClick={() => b.arrange(sel.id, 'dup')}><Icon name="copy" size={16} />ทำซ้ำ</button>
+                    <button type="button" className="btn btn--ghost btn--xs" onClick={() => b.arrange(sel.id, 'del')}><Icon name="trash" size={16} />ลบ</button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <p className="canvas__hint">{count ? 'แตะดอกในช่อเพื่อแก้ไข · ลากเพื่อย้าย' : 'ดอกที่ใส่จะขึ้นในช่อทันที'}</p>
+            )}
+            {view === '3d' && !sel && <p className="canvas__hint">ลากที่ว่างเพื่อหมุนช่อ · ลากดอกเพื่อย้าย</p>}
+          </div>
+          {toast}
+        </section>
+
+        {/* inspector: เรื่องละหนึ่งส่วน */}
+        <aside className="tool__inspector" aria-label="ตัวเลือกของช่อ">
+          <section className={`insp insp--sel${sel ? '' : ' insp--idle'}`}>
+            <div className="insp__head">
+              <h3 className="insp__title">ดอกที่เลือก</h3>
+              {sel && <span className="overline">{FLOWERS[sel.type].en}</span>}
+            </div>
+            {sel ? <SelectedTools it={sel} /> : <p className="insp__empty">แตะดอกไม้ในช่อเพื่อเปลี่ยนสีหรือปรับองศา</p>}
+          </section>
+
+          <section className="insp">
+            <div className="insp__head">
+              <h3 className="insp__title">กระดาษห่อ</h3>
+              <span className="insp__value">{PAPERS[design.paper].name}</span>
+            </div>
+            <Swatches
+              label="กระดาษห่อ" value={String(design.paper)} onChange={(k) => b.setPaper(+k)}
+              items={PAPERS.map((p, i) => ({ key: String(i), name: p.name, color: p.color, pattern: p.kind === 'news' }))}
+            />
+            <FilmToggle />
+          </section>
+
+          <section className="insp">
+            <div className="insp__head">
+              <h3 className="insp__title">ริบบิ้น</h3>
+              <span className="insp__value">{RIBBONS[design.ribbon][0]}</span>
+            </div>
+            <Swatches
+              label="ริบบิ้น" value={String(design.ribbon)} onChange={(k) => b.setRibbon(+k)}
+              items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
+            />
+          </section>
+
+          <section className="insp">
+            <div className="insp__head"><h3 className="insp__title">สรุปรายการ</h3></div>
+            <Summary design={design} />
+          </section>
+        </aside>
+      </div>
+      {dialog}
+    </PickerShell>
   );
 }
 
-// layers: ปุ่มสลับหน้า/หลัง ใช้เฉพาะ 2D (ใน 3D ลำดับหน้า-หลังมาจากตำแหน่งจริง)
-function SelectedTools({ it, layers }: { it: Item; layers: boolean }) {
+// สีและองศาของดอกที่เลือก — ค่าที่แน่นอนแสดงเป็นตัวเลขข้างสไลเดอร์
+function SelectedTools({ it }: { it: Item }) {
   const b = useBouquet();
   const f = FLOWERS[it.type];
   return (
-    <div>
-      <p className="sel-name">{f.name} · {f.en}</p>
+    <>
+      <p className="insp__name">{f.name}</p>
       {f.colors.length > 1 && (
-        <div className="swatches">
-          {f.colors.map((c) => (
-            <button
-              key={c.id} type="button" title={c.name} aria-label={c.name}
-              className={`sw${c.id === it.color ? ' on' : ''}`}
-              style={{ '--c': c.hex } as React.CSSProperties}
-              onClick={() => b.updateItem(it.id, { color: c.id })}
-            />
-          ))}
+        <div className="insp__row">
+          <span className="insp__label">สี</span>
+          <Swatches
+            label={`สี${f.name}`} value={it.color} onChange={(id) => b.updateItem(it.id, { color: id })}
+            items={f.colors.map((c) => ({ key: c.id, name: c.name, color: c.hex }))}
+          />
         </div>
       )}
-      <label className="range">เอียง
-        <input type="range" min={-30} max={30} step={1} value={it.r} onChange={(e) => b.updateItem(it.id, { r: +e.target.value })} />
+      <label className="insp__row">
+        <span className="insp__label">เอียง</span>
+        <span className="slider">
+          <input
+            className="range" type="range" min={-30} max={30} step={1} value={it.r}
+            style={{ '--pct': `${((it.r + 30) / 60) * 100}%` } as React.CSSProperties}
+            onChange={(e) => b.updateItem(it.id, { r: +e.target.value })}
+          />
+          <output className="slider__value num">{it.r < 0 ? '−' : it.r > 0 ? '+' : ''}{Math.abs(it.r)}°</output>
+        </span>
       </label>
-      <div className="tool-row">
-        {layers && (
-          <>
-            <button type="button" className="chip" onClick={() => b.arrange(it.id, 'front')}>ไว้ด้านหน้า</button>
-            <button type="button" className="chip" onClick={() => b.arrange(it.id, 'back')}>ไว้ด้านหลัง</button>
-          </>
-        )}
-        <button type="button" className="chip" onClick={() => b.arrange(it.id, 'dup')}>ทำซ้ำ</button>
-        <button type="button" className="chip chip--danger" onClick={() => b.arrange(it.id, 'del')}>ลบ</button>
-      </div>
-    </div>
-  );
-}
-
-function Swatches({ list, value, onChange }: { list: [string, string][]; value: number; onChange: (i: number) => void }) {
-  return (
-    <div className="swatches swatches--lg">
-      {list.map(([name, hex], i) => (
-        <button
-          key={name} type="button" title={name} aria-label={name}
-          className={`sw${i === value ? ' on' : ''}`}
-          style={{ '--c': hex } as React.CSSProperties}
-          onClick={() => onChange(i)}
-        />
-      ))}
-    </div>
+    </>
   );
 }

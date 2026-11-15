@@ -1,11 +1,11 @@
 /* ============================================================
-   Only Flower — ข้อมูลร้าน / ดอกไม้ / แบบสำเร็จ
+   freakyflower — ข้อมูลร้าน / ดอกไม้ / แบบสำเร็จ
    แก้ราคา สี ชื่อ หรือเพิ่มดอกไม้ได้ที่ไฟล์นี้ไฟล์เดียว
    รูปดอกไม้อยู่ที่ public/flowers/<ชนิด>-<สี>.webp (พื้นหลังโปร่งใส)
    ============================================================ */
 
 export const CONFIG = {
-  shopName: 'Only Flower',
+  shopName: 'freakyflower',
   maxItems: 45, // จำนวนชิ้นสูงสุดต่อช่อ
   lineId: '@onlyflower', // TODO: ใส่ LINE OA จริง
   phone: '08x-xxx-xxxx', // TODO: ใส่เบอร์จริง
@@ -14,7 +14,7 @@ export const CONFIG = {
 /* ---------- Pre-order วันลอยกระทง (หน้าแรก) ---------- */
 // รับช่อได้วันเดียว เฉพาะเวลาทำการ — ลูกค้าเลือกเวลารับเป็นช่วงละ step นาที
 // แก้เวลาแล้วต้องแก้ PICKUP_FROM / PICKUP_TO ใน scripts/loykrathong-apps-script.gs ให้ตรงกันด้วย
-export const PICKUP = { date: '24 พ.ย.', from: '14:00', to: '21:30', step: 30 };
+export const PICKUP = { date: '24 พ.ย.', from: '14:00', to: '21:30', step: 30, place: 'หน้าร้าน' };
 const toMin = (hm: string) => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
 export const PICKUP_SLOTS: string[] = (() => {
   const out: string[] = [];
@@ -25,8 +25,9 @@ export const PICKUP_SLOTS: string[] = (() => {
 })();
 
 export const LOYKRATHONG = {
-  title: 'Pre-order วันลอยกระทง',
-  detail: `เลือกช่อ กรอกข้อมูล โอนตาม QR แล้วแนบสลิป · รับช่อที่หน้าร้านวันที่ ${PICKUP.date} เวลา ${PICKUP.from}–${PICKUP.to} น.`,
+  eyebrow: 'Pre-order', // บรรทัดเล็กเหนือหัวเรื่อง (อักษรละติน — แสดงเป็นตัวพิมพ์ใหญ่)
+  title: 'วันลอยกระทง',
+  detail: 'เลือกช่อ กรอกข้อมูล โอนตาม QR แล้วแนบสลิป ร้านจัดช่อให้พร้อมรับตามเวลาที่เลือก', // วัน เวลา สถานที่รับ แสดงจาก PICKUP
   qrImage: '/loykrathong-qr.png', // วางรูป QR ชำระเงินที่ public/loykrathong-qr.png
   accountName: '', // TODO: ชื่อบัญชีที่แสดงใต้ QR (ไม่ใส่ก็ได้)
   endpoint: '', // TODO: URL Web app ของ Google Apps Script (ดู scripts/loykrathong-apps-script.gs)

@@ -1,4 +1,4 @@
-# Only Flower — Pre-order ช่อดอกไม้
+# freakyflower — Pre-order ช่อดอกไม้
 
 Next.js (App Router) · TypeScript · ออเดอร์ส่งเข้า Google Sheet ผ่าน Google Apps Script
 

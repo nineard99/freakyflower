@@ -13,7 +13,7 @@ import { Swatches } from './ui';
 
 // โหมด "ให้ร้านจัดให้": ลูกค้าเลือกชนิด สี จำนวน — ร้านเป็นคนจัดวางเอง
 export function ShopPicker({ onClose }: { onClose: () => void }) {
-  const { shop, shopDesign, setShop, editing, linesFull, commitDraft } = useBouquet();
+  const { shop, shopDesign, setShop, draftFilm, setDraftFilm, editing, linesFull, commitDraft } = useBouquet();
   const [active, setActive] = useState<Record<string, string>>({});
   const total = Object.values(shop.counts).reduce((a, n) => a + n, 0);
   const sum = summarize(shopDesign);
@@ -115,7 +115,7 @@ export function ShopPicker({ onClose }: { onClose: () => void }) {
                   items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
                 />
               </div>
-              <FilmToggle />
+              <FilmToggle checked={draftFilm} onChange={setDraftFilm} />
             </div>
           </section>
 

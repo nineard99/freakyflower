@@ -7,6 +7,7 @@ import { BouquetSvg } from './BouquetSvg';
 import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
 import type { ConfirmReq } from './ui';
+import { FilmToggle } from './FilmToggle';
 
 // จำนวนช่อของรายการ — ลดจนเหลือ 0 = เอาออกจากออเดอร์
 function Qty({ name, qty, onChange }: { name: string; qty: number; onChange: (n: number) => void }) {
@@ -26,10 +27,13 @@ function Qty({ name, qty, onChange }: { name: string; qty: number; onChange: (n:
 // ตัวเลือกช่อในฟอร์ม: แบบสำเร็จ (การ์ด + จำนวน) · ออกแบบเอง 2 ทาง (สร้างช่อใหม่) · รายการช่อที่ออกแบบไว้แล้ว
 // ออเดอร์เดียวสั่งได้หลายช่อ — การ์ดที่กดแล้ว (aria-pressed) = อยู่ในออเดอร์
 export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confirm: (req: ConfirmReq) => void }) {
-  const { lines, linesFull, film, withFilm, setQty, removeLine, toggleTemplate, openDraft, pending } = useBouquet();
-  // ภาพ + ราคาแบบสำเร็จคำนวณครั้งเดียวต่อค่าฟิล์ม (object เดิม → BouquetSvg ไม่วาดใหม่)
-  const templates = useMemo(() => TEMPLATES.map((t) => { const d = withFilm(templateDesign(t)); return { t, d, price: summarize(d).total }; }), [withFilm]);
-  const designed = useMemo(() => resolveLines(lines, film).filter((r) => r.line.kind !== 'template'), [lines, film]);
+  const { lines, linesFull, setQty, removeLine, setLineFilm, toggleTemplate, openDraft, pending } = useBouquet();
+  // ภาพ + ราคาแบบสำเร็จ ทั้งแบบไม่ห่อ/ห่อฟิล์ม คำนวณครั้งเดียว (object เดิม → BouquetSvg ไม่วาดใหม่)
+  const templates = useMemo(() => TEMPLATES.map((t) => {
+    const plain = templateDesign(t), film = { ...plain, film: true };
+    return { t, plain, film, price: summarize(plain).total, filmPrice: summarize(film).total };
+  }), []);
+  const designed = useMemo(() => resolveLines(lines).filter((r) => r.line.kind !== 'template'), [lines]);
   const hasCustom = pending.design.items.length > 0;
   const hasShop = pending.shopDesign.items.length > 0;
 
@@ -48,9 +52,10 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
     <div className="choices" role="group" aria-label="เลือกช่อดอกไม้" id="loy-choices">
       <p className="choices__label">แบบสำเร็จ <span className="choices__sub">เลือกได้หลายแบบ</span></p>
       <div className="choices__grid">
-        {templates.map(({ t, d, price }) => {
+        {templates.map(({ t, plain, film, price, filmPrice }) => {
           const line = lines.find((l) => l.kind === 'template' && l.templateId === t.id);
           const blocked = !line && linesFull;
+          const d = line?.film ? film : plain;
           return (
             <div key={t.id} className="choice-cell">
               <button type="button" aria-pressed={!!line} className="choice" disabled={blocked} onClick={() => toggleTemplate(t.id)}>
@@ -59,7 +64,7 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   {line && line.qty > 1 ? <b className="num">{line.qty}</b> : <Icon name="check" size={14} strokeWidth={2.6} />}
                 </span>
                 <span className="choice__name">{t.name}</span>
-                <span className="choice__price num">{baht(price)}</span>
+                <span className="choice__price num">{baht(line?.film ? filmPrice : price)}</span>
               </button>
               <div className="choice-cell__foot">
                 {line && <Qty name={t.name} qty={line.qty} onChange={(n) => setQty(line.id, n)} />}
@@ -67,6 +72,7 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   <Icon name="pencil" size={14} />ปรับแต่ง
                 </button>
               </div>
+              {line && <FilmToggle checked={line.film} onChange={(on) => setLineFilm(line.id, on)} name={t.name} />}
             </div>
           );
         })}
@@ -108,6 +114,7 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   <span className="cart__name">{name}</span>
                   <span className="cart__sub">{wrapLabel(design)}</span>
                   <span className="cart__sub num">{baht(unit)} / ช่อ{line.qty > 1 && <> · รวม {baht(total)}</>}</span>
+                  <FilmToggle checked={line.film} onChange={(on) => setLineFilm(line.id, on)} name={name} />
                 </span>
                 <span className="cart__actions">
                   <Qty name={name} qty={line.qty} onChange={(n) => setQty(line.id, n)} />

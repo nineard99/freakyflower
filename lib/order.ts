@@ -9,7 +9,6 @@ export type OrderRequest = {
   phone: string;
   ig: string;
   pickup: string;
-  film: boolean;
   lines: CartLine[];
   slip: string; // รูปสลิป (data URL)
 };
@@ -53,7 +52,7 @@ export function validateOrder(body: unknown): { error: string } | { order: Valid
   if (!IMAGE.test(slip)) return { error: 'แนบรูปสลิปการโอน' };
   if (slip.length > MAX_SLIP) return { error: 'รูปสลิปใหญ่เกินไป' };
 
-  const resolved = resolveLines(lines, b.film === true);
+  const resolved = resolveLines(lines);
   return {
     order: {
       name, phone, ig, pickup,

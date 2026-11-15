@@ -2,23 +2,23 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { cartCount, resolveLines, type ResolvedLine } from '@/lib/cart';
-import { baht, CONFIG, LOYKRATHONG, PICKUP, PICKUP_SLOTS, summarize, templateDesign, TEMPLATES } from '@/lib/catalog';
+import { baht, CONFIG, LOYKRATHONG, PICKUP, PICKUP_SLOTS } from '@/lib/catalog';
 import { normalizePhone, PHONE } from '@/lib/order';
 import { submitOrder } from '@/lib/submitOrder';
 import { useCountUp } from '@/lib/useCountUp';
 import { BouquetChoices } from './BouquetChoices';
 import { useBouquet } from './BouquetProvider';
 import { Builder } from './Builder';
-import { FilmToggle } from './FilmToggle';
 import { ShopPicker } from './ShopPicker';
 import { useConfirm } from './ui';
 import { CustomerFields } from './order/CustomerFields';
 import { OrderRail } from './order/OrderRail';
 import { OrderTicket } from './order/OrderTicket';
 import { PaymentFields } from './order/PaymentFields';
+import { ShopMap } from './order/ShopMap';
 import { FieldError, Step } from './order/Step';
 
-// หน้าแรก: ฟอร์ม pre-order 3 ขั้นตอน (เลือกช่อ → ข้อมูลผู้สั่ง → ชำระเงิน) + แถบสรุป
+// หน้าแรก: ที่ตั้งร้าน → ฟอร์ม pre-order 3 ขั้นตอน (เลือกช่อ → ข้อมูลผู้สั่ง → ชำระเงิน) + แถบสรุป
 // ไฟล์นี้ถือ state ของฟอร์มและการตรวจข้อมูล — หน้าตาแต่ละส่วนอยู่ใน components/order/
 
 type Field = 'choice' | 'name' | 'phone' | 'pickup' | 'slip';
@@ -28,13 +28,10 @@ const FIELD_ORDER: Field[] = ['choice', 'name', 'phone', 'pickup', 'slip'];
 const FIELD_TARGET: Record<Field, string> = {
   choice: '#loy-choices .choice', name: '#loy-name', phone: '#loy-phone', pickup: '#loy-pickup', slip: '#loy-slip',
 };
-const STEPS = 3;
-// ราคาเริ่มต้น = แบบสำเร็จที่ถูกที่สุด
-const FROM_PRICE = Math.min(...TEMPLATES.map((t) => summarize(templateDesign(t)).total));
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function OrderForm() {
-  const { lines, film, editing, closeDraft, clearCart } = useBouquet();
+  const { lines, editing, closeDraft, clearCart, removeLine } = useBouquet();
   const { confirm, dialog } = useConfirm();
   const [filled, setFilled] = useState({ name: false, phone: false });
   const [pickup, setPickup] = useState(''); // เวลารับช่อ (HH:MM)
@@ -45,14 +42,13 @@ export function OrderForm() {
   // ออเดอร์ที่ส่งแล้ว — เก็บไว้แสดงหน้าจองสำเร็จ (ตะกร้าล้างหลังส่ง)
   const [placed, setPlaced] = useState<{ orderNo: string; lines: ResolvedLine[]; total: number } | null>(null);
 
-  const resolved = useMemo(() => resolveLines(lines, film), [lines, film]);
+  const resolved = useMemo(() => resolveLines(lines), [lines]);
   const total = useMemo(() => resolved.reduce((a, r) => a + r.total, 0), [resolved]);
   const count = cartCount(lines);
   const hasOrder = lines.length > 0;
   const shown = useCountUp(total);
 
   const done = [hasOrder, filled.name && filled.phone && !!pickup, hasOrder && !!slip];
-  const doneCount = done.filter(Boolean).length;
 
   const clearError = useCallback((f: Field) => setErrors((e) => {
     if (!(f in e)) return e;
@@ -88,7 +84,7 @@ export function OrderForm() {
 
     setSending(true);
     try {
-      const orderNo = await submitOrder({ name, phone, ig: v('ig'), pickup, film, lines, slip });
+      const orderNo = await submitOrder({ name, phone, ig: v('ig'), pickup, lines, slip });
       setPlaced({ orderNo, lines: resolved, total });
       clearCart();
       window.scrollTo({ top: 0 });
@@ -99,45 +95,27 @@ export function OrderForm() {
     }
   }
 
-  const topbar = (
-    <header className="topbar">
-      <div className="wrap topbar__inner">
-        <p className="topbar__name">{CONFIG.shopName}</p>
-        {!placed && (
-          <div
-            className="meter" role="progressbar" aria-label="ความคืบหน้าการจอง"
-            aria-valuemin={0} aria-valuemax={STEPS} aria-valuenow={doneCount} aria-valuetext={`เสร็จแล้ว ${doneCount} จาก ${STEPS} ขั้นตอน`}
-          >
-            <span className="meter__text">เสร็จแล้ว <b className="num">{doneCount}/{STEPS}</b></span>
-            <span className="meter__track"><span className="meter__fill" style={{ width: `${(doneCount / STEPS) * 100}%` }} /></span>
-          </div>
-        )}
-      </div>
-    </header>
-  );
+  // ลบช่อจากแถบสรุป — แบบสำเร็จกดเลือกใหม่ได้ทันที · ช่อที่ออกแบบเองหายแล้วกู้ไม่ได้ จึงถามก่อน
+  const removeFromRail = useCallback((r: ResolvedLine) => {
+    if (r.line.kind === 'template') return removeLine(r.line.id);
+    confirm({
+      title: `ลบ “${r.name}” ออกจากออเดอร์`, body: 'ช่อที่ออกแบบไว้จะหายไป และกู้คืนไม่ได้',
+      confirmLabel: 'ลบ', danger: true, onConfirm: () => removeLine(r.line.id),
+    });
+  }, [confirm, removeLine]);
 
   if (placed) {
-    return <>{topbar}<OrderTicket orderNo={placed.orderNo} lines={placed.lines} total={placed.total} pickup={pickup} /></>;
+    return <OrderTicket orderNo={placed.orderNo} lines={placed.lines} total={placed.total} pickup={pickup} />;
   }
 
   return (
     <>
-      {topbar}
       <main className="wrap">
         <header className="hero">
           <div className="hero__copy">
-            <h1 className="hero__title enter">
-              <span className="overline hero__eyebrow">{LOYKRATHONG.eyebrow}</span>
-              {LOYKRATHONG.title}
-            </h1>
+            <h1 className="hero__title enter">{CONFIG.shopName}</h1>
             <p className="hero__lead enter" style={{ '--i': 1 } as React.CSSProperties}>{LOYKRATHONG.detail}</p>
           </div>
-          <dl className="facts enter" style={{ '--i': 2 } as React.CSSProperties}>
-            <div><dt>วันรับช่อ</dt><dd className="num">{PICKUP.date}</dd></div>
-            <div><dt>ช่วงเวลา</dt><dd className="num">{PICKUP.from}–{PICKUP.to} น.</dd></div>
-            <div><dt>สถานที่</dt><dd>{PICKUP.place}</dd></div>
-            <div><dt>ราคาเริ่มต้น</dt><dd className="num">{baht(FROM_PRICE)}</dd></div>
-          </dl>
         </header>
 
         <form
@@ -152,11 +130,12 @@ export function OrderForm() {
           }}
         >
           <div className="order__steps">
+            <ShopMap enterIndex={2} />
+
             <Step n={1} title="เลือกช่อ" done={done[0]} enterIndex={3}
               status={hasOrder ? `${count} ช่อ · ${baht(total)}` : 'เลือกแบบสำเร็จ หรือออกแบบเอง'}>
               <BouquetChoices confirm={confirm} />
               {errors.choice && <FieldError>{errors.choice}</FieldError>}
-              <FilmToggle />
             </Step>
 
             <Step n={2} title="ข้อมูลผู้สั่ง" done={done[1]} enterIndex={4} bodyClass="fields"
@@ -177,7 +156,7 @@ export function OrderForm() {
           <OrderRail
             resolved={resolved} count={count} total={total} shown={shown} pickup={pickup}
             messages={FIELD_ORDER.map((f) => errors[f]).filter(Boolean) as string[]}
-            failure={failure} sending={sending} still={!!editing || !!dialog} doneCount={doneCount}
+            failure={failure} sending={sending} still={!!editing || !!dialog} onRemove={removeFromRail}
           />
         </form>
       </main>

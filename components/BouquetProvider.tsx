@@ -24,9 +24,7 @@ type Ctx = {
   removeLine: (id: string) => void;
   toggleTemplate: (templateId: string) => void;
   clearCart: () => void;
-  film: boolean; // ห่อฟิล์มใสทับกระดาษ — ตัวเลือกของทั้งออเดอร์ ใช้กับทุกช่อ
-  setFilm: (on: boolean) => void;
-  withFilm: (d: Design) => Design;
+  setLineFilm: (id: string, on: boolean) => void; // ห่อฟิล์มใสทับกระดาษ — เลือกแยกทีละรายการ
 
   /* หน้าเครื่องมือ (จัดวางเอง / ให้ร้านจัดให้) ทำงานกับ "ร่าง" */
   editing: Editing;
@@ -39,6 +37,8 @@ type Ctx = {
   shop: ShopPick; // ร่างให้ร้านจัด (ที่เปิดอยู่)
   shopDesign: Design; // ภาพตัวอย่างที่จัดอัตโนมัติจาก shop.counts
   setShop: (fn: (s: ShopPick) => ShopPick) => void;
+  draftFilm: boolean; // ฟิล์มใสของร่างที่เปิดอยู่ (จัดวางเอง / ให้ร้านจัด)
+  setDraftFilm: (on: boolean) => void;
   selected: number | null;
   setSelected: (id: number | null) => void;
   setPaper: (i: number) => void;
@@ -63,7 +63,6 @@ type SetDesign = React.Dispatch<React.SetStateAction<Design>>;
 
 export function BouquetProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
-  const [film, setFilm] = useState(false);
   // ร่างช่อใหม่ (จำไว้ในเครื่อง) กับร่างที่กำลังแก้รายการเดิม (ชั่วคราว)
   const [newDesign, setNewDesign] = useState<Design>(EMPTY_DESIGN);
   const [newShop, setNewShop] = useState<ShopPick>(EMPTY_SHOP);
@@ -80,10 +79,10 @@ export function BouquetProvider({ children }: { children: React.ReactNode }) {
       type Old = { design?: Design; shop?: ShopPick; film?: boolean };
       const v6 = JSON.parse(localStorage.getItem(LS_KEY) || 'null') as V6 | null;
       if (v6) {
-        setLines(sanitizeLines(v6.lines));
-        setNewDesign(sanitizeDesign(v6.draft?.design));
-        setNewShop(sanitizeShop(v6.draft?.shop));
-        setFilm(!!v6.film);
+        // v6 รุ่นแรก: ฟิล์มเป็นค่าของทั้งออเดอร์ (v6.film) → แจกให้ทุกรายการและร่างที่ยังไม่มีค่าของตัวเอง
+        setLines(sanitizeLines(v6.lines, !!v6.film));
+        setNewDesign({ ...sanitizeDesign(v6.draft?.design), film: v6.draft?.design?.film ?? !!v6.film });
+        setNewShop({ ...sanitizeShop(v6.draft?.shop), film: v6.draft?.shop?.film ?? !!v6.film });
       } else {
         let old = JSON.parse(localStorage.getItem(LS_KEY_V5) || 'null') as Old | null;
         if (!old) {
@@ -95,9 +94,8 @@ export function BouquetProvider({ children }: { children: React.ReactNode }) {
           }
         }
         if (old) {
-          setNewDesign(sanitizeDesign(old.design));
-          setNewShop(sanitizeShop(old.shop));
-          setFilm(!!old.film);
+          setNewDesign({ ...sanitizeDesign(old.design), film: !!old.film });
+          setNewShop({ ...sanitizeShop(old.shop), film: !!old.film });
         }
       }
     } catch { /* ignore */ }
@@ -105,35 +103,38 @@ export function BouquetProvider({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => {
     if (!loaded) return;
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ lines, draft: { design: newDesign, shop: newShop }, film })); } catch { /* ignore */ }
-  }, [lines, newDesign, newShop, film, loaded]);
-
-  const withFilm = useCallback((d: Design): Design => ({ ...d, film }), [film]);
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ lines, draft: { design: newDesign, shop: newShop } })); } catch { /* ignore */ }
+  }, [lines, newDesign, newShop, loaded]);
 
   // ร่างที่หน้าเครื่องมือใช้อยู่ตอนนี้
   const isEdit = !!editing?.lineId;
-  const rawDesign = isEdit ? editDesign : newDesign;
+  // ร่างจัดวางเองเก็บฟิล์มไว้ใน design.film · ร่างให้ร้านจัดเก็บใน shop.film
+  const design = isEdit ? editDesign : newDesign;
   const setDesign: SetDesign = isEdit ? setEditDesign : setNewDesign;
   const shop = isEdit ? editShop : newShop;
   const setShop = useCallback((fn: (s: ShopPick) => ShopPick) => (isEdit ? setEditShop : setNewShop)(fn), [isEdit]);
-  const design = useMemo(() => withFilm(rawDesign), [rawDesign, withFilm]);
+  const draftFilm = editing?.kind === 'shop' ? !!shop.film : !!design.film;
+  const setDraftFilm = useCallback((film: boolean) => {
+    if (editing?.kind === 'shop') setShop((s) => ({ ...s, film }));
+    else setDesign((d) => ({ ...d, film }));
+  }, [editing?.kind, setShop, setDesign]);
 
   const addFlower = useCallback((type: string, color: string, x?: number, y?: number) => {
-    if (rawDesign.items.length >= CONFIG.maxItems) {
+    if (design.items.length >= CONFIG.maxItems) {
       alert(`ใส่ได้สูงสุด ${CONFIG.maxItems} ชิ้นต่อช่อ`);
       return;
     }
     const back = FLOWERS[type].role !== 'main';
     const it: Item = {
-      id: nextId(rawDesign.items), type, color,
+      id: nextId(design.items), type, color,
       x: x ?? 200 + Math.round((Math.random() - 0.5) * 120),
       y: y ?? (back ? 170 : 220) + Math.round((Math.random() - 0.5) * 70),
-      r: back ? (rawDesign.items.length % 2 ? 20 : -20) : Math.round((Math.random() - 0.5) * 16),
+      r: back ? (design.items.length % 2 ? 20 : -20) : Math.round((Math.random() - 0.5) * 16),
     };
     // ดอกรองไว้ด้านหลัง
     setDesign((d) => ({ ...d, items: back ? [it, ...d.items] : [...d.items, it] }));
     setSelected(it.id);
-  }, [rawDesign.items, setDesign]);
+  }, [design.items, setDesign]);
 
   const updateItem = useCallback((id: number, patch: Partial<Item>) => {
     setDesign((d) => ({ ...d, items: d.items.map((it) => (it.id === id ? { ...it, ...patch } : it)) }));
@@ -157,63 +158,69 @@ export function BouquetProvider({ children }: { children: React.ReactNode }) {
     });
   }, [setDesign]);
 
-  const shopDesign = useMemo(() => withFilm(shopToDesign(shop)), [shop, withFilm]);
-  const pending = useMemo(() => ({ design: withFilm(newDesign), shopDesign: withFilm(shopToDesign(newShop)) }), [newDesign, newShop, withFilm]);
+  const shopDesign = useMemo(() => ({ ...shopToDesign(shop), film: !!shop.film }), [shop]);
+  const pending = useMemo(() => ({ design: newDesign, shopDesign: { ...shopToDesign(newShop), film: !!newShop.film } }), [newDesign, newShop]);
 
   /* ---------- ออเดอร์ ---------- */
   const setQty = useCallback((id: string, qty: number) => {
     setLines((ls) => (qty <= 0 ? ls.filter((l) => l.id !== id) : ls.map((l) => (l.id === id ? { ...l, qty: Math.min(CONFIG.maxQty, qty) } : l))));
   }, []);
   const removeLine = useCallback((id: string) => setLines((ls) => ls.filter((l) => l.id !== id)), []);
+  const setLineFilm = useCallback((id: string, film: boolean) => setLines((ls) => ls.map((l) => (l.id === id ? { ...l, film } : l))), []);
   const toggleTemplate = useCallback((templateId: string) => {
     setLines((ls) => {
       if (ls.some((l) => l.kind === 'template' && l.templateId === templateId)) return ls.filter((l) => !(l.kind === 'template' && l.templateId === templateId));
       if (ls.length >= CONFIG.maxLines) return ls;
-      return [...ls, { id: newLineId(), qty: 1, kind: 'template', templateId }];
+      return [...ls, { id: newLineId(), qty: 1, film: false, kind: 'template', templateId }];
     });
   }, []);
   const clearCart = useCallback(() => setLines([]), []);
 
   const openDraft = useCallback((kind: 'custom' | 'shop', lineId: string | null = null, seed?: Design) => {
     const line = lineId ? lines.find((l) => l.id === lineId) : undefined;
-    if (line?.kind === 'custom') setEditDesign(line.design);
-    else if (line?.kind === 'shop') setEditShop(line.pick);
-    else if (seed) setNewDesign({ paper: seed.paper, ribbon: seed.ribbon, items: seed.items });
+    if (line?.kind === 'custom') setEditDesign({ ...line.design, film: line.film });
+    else if (line?.kind === 'shop') setEditShop({ ...line.pick, film: line.film });
+    else if (seed) setNewDesign((d) => ({ paper: seed.paper, ribbon: seed.ribbon, items: seed.items, film: d.film }));
     setSelected(null);
     setEditing({ kind, lineId: line ? line.id : null });
   }, [lines]);
 
   const save = useCallback(() => {
     if (!editing) return;
-    const d = editing.kind === 'custom' ? rawDesign : null;
-    const empty = d ? !d.items.length : !Object.keys(shop.counts).length;
+    // ฟิล์มย้ายจากร่างไปเก็บที่ line.film
+    const custom = editing.kind === 'custom';
+    const { film: dFilm, ...d } = design;
+    const { film: sFilm, ...pick } = shop;
+    const film = !!(custom ? dFilm : sFilm);
+    const empty = custom ? !d.items.length : !Object.keys(pick.counts).length;
     if (editing.lineId) {
       const id = editing.lineId;
       setLines((ls) => (empty
         ? ls.filter((l) => l.id !== id)
-        : ls.map((l) => (l.id !== id ? l : d ? { ...l, kind: 'custom', design: d } as CartLine : { ...l, kind: 'shop', pick: shop } as CartLine))));
+        : ls.map((l) => (l.id !== id ? l : custom ? { id, qty: l.qty, film, kind: 'custom', design: d } : { id, qty: l.qty, film, kind: 'shop', pick }))));
       return;
     }
     if (empty) return;
-    setLines((ls) => (ls.length >= CONFIG.maxLines ? ls : [...ls, d ? { id: newLineId(), qty: 1, kind: 'custom', design: d } : { id: newLineId(), qty: 1, kind: 'shop', pick: shop }]));
-    if (d) setNewDesign((x) => ({ ...x, items: [] }));
+    const line: CartLine = custom ? { id: newLineId(), qty: 1, film, kind: 'custom', design: d } : { id: newLineId(), qty: 1, film, kind: 'shop', pick };
+    setLines((ls) => (ls.length >= CONFIG.maxLines ? ls : [...ls, line]));
+    if (custom) setNewDesign((x) => ({ ...x, items: [], film: false }));
     else setNewShop(EMPTY_SHOP);
-  }, [editing, rawDesign, shop]);
+  }, [editing, design, shop]);
 
   const commitDraft = useCallback(() => { save(); setEditing(null); setSelected(null); }, [save]);
   const closeDraft = useCallback(() => { if (editing?.lineId) save(); setEditing(null); setSelected(null); }, [editing, save]);
 
   const value = useMemo<Ctx>(() => ({
-    lines, linesFull: lines.length >= CONFIG.maxLines, setQty, removeLine, toggleTemplate, clearCart, film, setFilm, withFilm,
+    lines, linesFull: lines.length >= CONFIG.maxLines, setQty, removeLine, setLineFilm, toggleTemplate, clearCart,
     editing, openDraft, commitDraft, closeDraft, pending,
-    design, shop, shopDesign, setShop, selected, setSelected,
+    design, shop, shopDesign, setShop, draftFilm, setDraftFilm, selected, setSelected,
     setPaper: (paper) => setDesign((d) => ({ ...d, paper })),
     setRibbon: (ribbon) => setDesign((d) => ({ ...d, ribbon })),
     addFlower, updateItem, arrange,
-    replace: (d) => { setDesign({ paper: d.paper, ribbon: d.ribbon, items: d.items }); setSelected(null); },
+    replace: (d) => { setDesign((x) => ({ paper: d.paper, ribbon: d.ribbon, items: d.items, film: x.film })); setSelected(null); },
     clear: () => { setDesign((d) => ({ ...d, items: [] })); setSelected(null); },
-  }), [lines, setQty, removeLine, toggleTemplate, clearCart, film, withFilm, editing, openDraft, commitDraft, closeDraft, pending,
-    design, shop, shopDesign, setShop, selected, setDesign, addFlower, updateItem, arrange]);
+  }), [lines, setQty, removeLine, setLineFilm, toggleTemplate, clearCart, editing, openDraft, commitDraft, closeDraft, pending,
+    design, shop, shopDesign, setShop, draftFilm, setDraftFilm, selected, setDesign, addFlower, updateItem, arrange]);
 
   return <BouquetCtx.Provider value={value}>{children}</BouquetCtx.Provider>;
 }

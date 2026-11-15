@@ -7,7 +7,7 @@ import { ThermalButton } from '../ThermalButton';
 import { Alert } from '../ui';
 
 // แถบสรุปคำสั่งจอง (จอกว้างติดอยู่ด้านขวา) + ปุ่มยืนยัน — ปุ่มร้อนปุ่มเดียวของหน้า
-export function OrderRail({ resolved, count, total, shown, pickup, messages, failure, sending, still, doneCount }: {
+export function OrderRail({ resolved, count, total, shown, pickup, messages, failure, sending, still, onRemove }: {
   resolved: ResolvedLine[];
   count: number;
   total: number;
@@ -17,7 +17,7 @@ export function OrderRail({ resolved, count, total, shown, pickup, messages, fai
   failure: string; // ส่งแล้วไม่สำเร็จ
   sending: boolean;
   still: boolean; // มีหน้าเครื่องมือ/modal บังอยู่
-  doneCount: number;
+  onRemove: (r: ResolvedLine) => void;
 }) {
   const hasOrder = resolved.length > 0;
   return (
@@ -36,7 +36,12 @@ export function OrderRail({ resolved, count, total, shown, pickup, messages, fai
                   <Summary design={r.design} />
                 </details>
               </div>
-              <span className="rail__price num">{baht(r.total)}</span>
+              <div className="rail__end">
+                <span className="rail__price num">{baht(r.total)}</span>
+                <button type="button" className="btn btn--ghost btn--xs btn--icon" aria-label={`ลบ ${r.name}`} onClick={() => onRemove(r)}>
+                  <Icon name="trash" size={16} />
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -59,8 +64,7 @@ export function OrderRail({ resolved, count, total, shown, pickup, messages, fai
         </Alert>
       )}
       {failure && <Alert title="ยังจองไม่สำเร็จ">{failure}</Alert>}
-      {/* สนามความร้อนอุ่นขึ้นตามขั้นตอนที่ทำเสร็จ */}
-      <ThermalButton type="submit" full icon="arrow-right" status={sending ? 'loading' : 'idle'} still={still} intensity={0.25 + 0.25 * doneCount}>
+      <ThermalButton type="submit" full icon="arrow-right" status={sending ? 'loading' : 'idle'} still={still}>
         {sending ? 'กำลังส่ง' : hasOrder ? `ยืนยันการจอง · ${baht(shown)}` : 'ยืนยันการจอง'}
       </ThermalButton>
       <p className="rail__note">ร้านจะตรวจสลิปและติดต่อกลับทางเบอร์โทรที่ให้ไว้</p>

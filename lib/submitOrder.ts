@@ -2,7 +2,7 @@ import type { CartLine } from './cart';
 import { shrinkImage } from './image';
 import type { OrderRequest, OrderResponse } from './order';
 
-type Input = { name: string; phone: string; ig: string; pickup: string; film: boolean; lines: CartLine[]; slip: File };
+type Input = { name: string; phone: string; ig: string; pickup: string; lines: CartLine[]; slip: File };
 
 // ส่งออเดอร์ไป /api/order (server ตรวจซ้ำและคำนวณยอดเอง) — คืนเลขออเดอร์ หรือ throw ข้อความที่แสดงให้ลูกค้าได้
 // รูปช่อไม่ต้องส่ง — server สร้างลิงก์ดูช่อ 3D จากรายการช่อเอง

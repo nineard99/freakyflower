@@ -27,10 +27,15 @@ export function Builder({ onClose }: { onClose: () => void }) {
   const { confirm, dialog } = useConfirm();
   const { toast, notify } = useToast();
   // มุมมองพื้นที่จัดช่อ: 2D (ภาพด้านหน้า) หรือ 3D (หมุนดูรอบช่อ) — สลับได้ตลอด ใช้ข้อมูลช่อชุดเดียวกัน
-  const [view, setViewState] = useState<View>('3d');
-  useEffect(() => {
-    try { if (localStorage.getItem(VIEW_KEY) === '2d') setViewState('2d'); } catch { /* ignore */ }
-  }, []);
+  // ค่าเริ่ม: มือถือ/จอสัมผัส = 2D (ใช้ง่ายกว่า ไม่หนักเครื่อง) · จอใหญ่ = 3D · ถ้าเคยเลือกเองไว้ใช้ค่านั้น
+  // Builder เปิดหลังลูกค้ากดเท่านั้น (ไม่ถูก render ฝั่ง server) จึงอ่าน window ตอนสร้าง state ได้ — มือถือไม่ต้องโหลด 3D ก่อนแล้วค่อยสลับ
+  const [view, setViewState] = useState<View>(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_KEY);
+      if (saved === '2d' || saved === '3d') return saved;
+    } catch { /* ignore */ }
+    return window.matchMedia('(max-width: 767px), (pointer: coarse)').matches ? '2d' : '3d';
+  });
   const setView = (v: View) => {
     setViewState(v);
     try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ }
@@ -121,7 +126,7 @@ export function Builder({ onClose }: { onClose: () => void }) {
             <div className="lib__presets" key="preset">
               {TEMPLATES.map((t) => (
                 <button key={t.id} type="button" className="preset" onClick={() => loadPreset(t)}>
-                  <BouquetSvg design={b.withFilm(templateDesign(t))} label="" aria-hidden />
+                  <BouquetSvg design={{ ...templateDesign(t), film: design.film }} label="" aria-hidden />
                   <span>{t.name}</span>
                 </button>
               ))}
@@ -255,7 +260,7 @@ export function Builder({ onClose }: { onClose: () => void }) {
               label="กระดาษห่อ" value={String(design.paper)} onChange={(k) => b.setPaper(+k)}
               items={PAPERS.map((p, i) => ({ key: String(i), name: p.name, color: p.color, pattern: p.kind === 'news' }))}
             />
-            <FilmToggle />
+            <FilmToggle checked={b.draftFilm} onChange={b.setDraftFilm} />
           </section>
 
           <section className="insp">

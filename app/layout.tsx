@@ -8,7 +8,7 @@ const body = Inter({ subsets: ['latin'], weight: ['400', '500', '600'], variable
 const thai = IBM_Plex_Sans_Thai({ subsets: ['thai', 'latin'], weight: ['400', '500', '600'], variable: '--font-plex-thai' });
 
 export const metadata: Metadata = {
-  title: 'freakyflower — Pre-order ช่อดอกไม้',
+  title: 'FreakyFlower — Pre-order ช่อดอกไม้',
   description: 'สั่งจองช่อดอกไม้ล่วงหน้า เลือกแบบสำเร็จหรือจัดวางดอกไม้เองได้ตามใจ',
 };
 

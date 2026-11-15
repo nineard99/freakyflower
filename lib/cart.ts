@@ -2,12 +2,13 @@ import { arrange as autoArrange, type Counts } from './arrange';
 import { CONFIG, FLOWERS, PAPERS, RIBBONS, summarize, templateDesign, TEMPLATES, wrapLabel, type Design } from './catalog';
 
 /* ตะกร้า: ออเดอร์เดียวสั่งได้หลายช่อ — แต่ละรายการ = แบบสำเร็จ / จัดวางเอง / ให้ร้านจัดให้ + จำนวน
-   ฟิล์มใสเป็นตัวเลือกของทั้งออเดอร์ (ใส่ตอนคำนวณ ไม่เก็บในรายการ) */
+   ฟิล์มใสเลือกแยกได้ทีละรายการ (line.film) */
 
 // โหมดให้ร้านจัดให้: ลูกค้าเลือกแค่ชนิด/สี/จำนวน + กระดาษ ริบบิ้น และโน้ตถึงร้าน
-export type ShopPick = { counts: Counts; paper: number; ribbon: number; note: string };
+// film อยู่ในร่างเท่านั้น — พอเพิ่มลงออเดอร์แล้วย้ายไปเก็บที่ line.film
+export type ShopPick = { counts: Counts; paper: number; ribbon: number; note: string; film?: boolean };
 
-type LineBase = { id: string; qty: number };
+type LineBase = { id: string; qty: number; film: boolean }; // film = ห่อฟิล์มใสทับกระดาษ
 export type CartLine =
   | (LineBase & { kind: 'template'; templateId: string })
   | (LineBase & { kind: 'custom'; design: Design })
@@ -42,12 +43,13 @@ export function sanitizeShop(sp?: Partial<ShopPick> | null): ShopPick {
 }
 
 // รายการจาก localStorage: ทิ้งรายการที่พัง/แบบที่ร้านเลิกขายแล้ว
-export function sanitizeLines(raw: unknown): CartLine[] {
+// legacyFilm: ข้อมูลรุ่นเก่าที่ฟิล์มเป็นค่าของทั้งออเดอร์ → ใช้กับรายการที่ยังไม่มีค่า film ของตัวเอง
+export function sanitizeLines(raw: unknown, legacyFilm = false): CartLine[] {
   if (!Array.isArray(raw)) return [];
   const out: CartLine[] = [];
   for (const l of raw as Partial<CartLine & { templateId: string; design: Design; pick: ShopPick }>[]) {
     if (!l || typeof l !== 'object') continue;
-    const base = { id: typeof l.id === 'string' && l.id ? l.id : newLineId(), qty: clampQty(l.qty) };
+    const base = { id: typeof l.id === 'string' && l.id ? l.id : newLineId(), qty: clampQty(l.qty), film: typeof l.film === 'boolean' ? l.film : legacyFilm };
     if (l.kind === 'template' && TEMPLATES.some((t) => t.id === l.templateId)) {
       if (!out.some((x) => x.kind === 'template' && x.templateId === l.templateId)) out.push({ ...base, kind: 'template', templateId: l.templateId! });
     } else if (l.kind === 'custom') {
@@ -63,11 +65,11 @@ export function sanitizeLines(raw: unknown): CartLine[] {
 
 export const shopToDesign = (s: ShopPick): Design => ({ paper: s.paper, ribbon: s.ribbon, items: autoArrange(s.counts) });
 
-export function lineDesign(l: CartLine, film: boolean): Design {
+export function lineDesign(l: CartLine): Design {
   const d = l.kind === 'template'
     ? templateDesign(TEMPLATES.find((t) => t.id === l.templateId)!)
     : l.kind === 'custom' ? l.design : shopToDesign(l.pick);
-  return { ...d, film };
+  return { ...d, film: l.film };
 }
 
 // ชื่อรายการ: แบบสำเร็จใช้ชื่อแบบ · จัดเอง/ร้านจัด มีเลขลำดับเมื่อมีมากกว่าหนึ่ง
@@ -81,9 +83,9 @@ export function lineName(l: CartLine, lines: CartLine[]) {
 export const cartCount = (lines: CartLine[]) => lines.reduce((a, l) => a + l.qty, 0);
 
 export type ResolvedLine = { line: CartLine; name: string; design: Design; unit: number; total: number };
-export function resolveLines(lines: CartLine[], film: boolean): ResolvedLine[] {
+export function resolveLines(lines: CartLine[]): ResolvedLine[] {
   return lines.map((line) => {
-    const design = lineDesign(line, film);
+    const design = lineDesign(line);
     const unit = summarize(design).total;
     return { line, name: lineName(line, lines), design, unit, total: unit * line.qty };
   });

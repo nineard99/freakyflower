@@ -27,9 +27,9 @@ export function Builder({ onClose }: { onClose: () => void }) {
   const { confirm, dialog } = useConfirm();
   const { toast, notify } = useToast();
   // มุมมองพื้นที่จัดช่อ: 2D (ภาพด้านหน้า) หรือ 3D (หมุนดูรอบช่อ) — สลับได้ตลอด ใช้ข้อมูลช่อชุดเดียวกัน
-  const [view, setViewState] = useState<View>('2d');
+  const [view, setViewState] = useState<View>('3d');
   useEffect(() => {
-    try { if (localStorage.getItem(VIEW_KEY) === '3d') setViewState('3d'); } catch { /* ignore */ }
+    try { if (localStorage.getItem(VIEW_KEY) === '2d') setViewState('2d'); } catch { /* ignore */ }
   }, []);
   const setView = (v: View) => {
     setViewState(v);

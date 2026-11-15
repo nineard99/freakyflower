@@ -2,12 +2,13 @@
  * รับออเดอร์ Pre-order วันลอยกระทง → บันทึกลง Google Sheet + เก็บรูปช่อและสลิปใน Google Drive
  *
  * ติดตั้ง (ทำครั้งเดียว):
- * 1. สร้าง Google Sheet ใหม่ → เมนู Extensions → Apps Script → วางโค้ดนี้ทั้งไฟล์
- * 2. (แนะนำ) สร้างโฟลเดอร์ใน Drive สำหรับสลิป แล้วเอา id จาก URL มาใส่ FOLDER_ID
- *    เช่น drive.google.com/drive/folders/<FOLDER_ID>
- * 3. ตั้งรหัสลับ: Project Settings (รูปเฟือง) → Script Properties → Add script property
+ * 1. สร้าง Google Sheet ใหม่ (ด้วยบัญชีร้าน) → เมนู Extensions → Apps Script → วางโค้ดนี้ทั้งไฟล์ → Save
+ * 2. ตั้งรหัสลับ: Project Settings (รูปเฟือง) → Script Properties → Add script property
  *    Property = ORDER_SECRET, Value = ค่าเดียวกับ ORDER_SECRET ใน .env.local / Vercel
  *    (ไม่ตั้ง = รับทุกออเดอร์ ใครรู้ URL ก็ยิงเข้า Sheet ได้ — ตั้งไว้เสมอ)
+ * 3. กลับหน้า Editor → เลือกฟังก์ชัน setup ในแถบด้านบน → Run → Authorize
+ *    setup จะสร้างแท็บ + หัวตาราง และโฟลเดอร์เก็บสลิป/รูปช่อไว้ข้าง Sheet ให้เอง แล้วบอกผลใน Execution log
+ *    (ไม่รัน setup ก็ได้ — ออเดอร์แรกจะสร้างโฟลเดอร์ให้เอง แต่รันไว้จะได้เช็กว่าตั้งค่าครบ)
  * 4. Deploy → New deployment → Web app
  *    - Execute as: Me   - Who has access: Anyone
  *    กด Authorize แล้วคัดลอก Web app URL (ลงท้าย /exec)
@@ -16,7 +17,9 @@
  */
 
 const SHEET_NAME = 'ลอยกระทง';
-const FOLDER_ID = ''; // ว่าง = เก็บที่ My Drive
+// โฟลเดอร์เก็บสลิปและรูปช่อ — สร้างอัตโนมัติข้าง Sheet แล้วจำ id ไว้ใน Script Property "FOLDER_ID"
+// (อยากใช้โฟลเดอร์ที่มีอยู่แล้ว: ใส่ id จาก URL drive.google.com/drive/folders/<id> ใน Script Property FOLDER_ID เอง)
+const FOLDER_NAME = 'freakyflower — สลิปและรูปช่อ (ลอยกระทง)';
 // เวลารับช่อ (วันที่ 24 พ.ย. วันเดียว) — ต้องตรงกับ PICKUP ใน lib/catalog.ts
 const PICKUP_FROM = '14:00';
 const PICKUP_TO = '21:30';
@@ -49,9 +52,10 @@ function doPost(e) {
     const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
     const lock = LockService.getScriptLock();
     lock.waitLock(20000);
-    let row, orderNo;
+    let row, orderNo, folder;
     try {
-      if (sh.getLastRow() === 0) sh.appendRow(HEADERS).setFrozenRows(1);
+      ensureHeaders(sh);
+      folder = orderFolder();
       orderNo = 'LK-' + String(sh.getLastRow()).padStart(3, '0');
       sh.appendRow([orderNo, new Date(), '', '', '', '', '', '', '', '', 'กำลังบันทึก']);
       row = sh.getLastRow();
@@ -59,7 +63,6 @@ function doPost(e) {
       lock.releaseLock();
     }
 
-    const folder = FOLDER_ID ? DriveApp.getFolderById(FOLDER_ID) : DriveApp.getRootFolder();
     const save = (img, suffix) => folder.createFile(Utilities.newBlob(Utilities.base64Decode(img.data), img.type, orderNo + '-' + suffix)).getUrl();
     const slipUrl = save(slip, 'slip');
     const designUrls = designs.map((img, i) => save(img, 'bouquet-' + (i + 1))).join('\n');
@@ -69,6 +72,39 @@ function doPost(e) {
   } catch (err) {
     return json({ ok: false, error: String(err && err.message || err) });
   }
+}
+
+// รันครั้งเดียวจาก Editor (เลือก setup → Run): สร้างแท็บ/หัวตาราง/โฟลเดอร์ + ขอสิทธิ์ + เช็กรหัสลับ
+function setup() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  ensureHeaders(sh);
+  const folder = orderFolder();
+  const hasSecret = !!PropertiesService.getScriptProperties().getProperty('ORDER_SECRET');
+  Logger.log('แท็บ "' + SHEET_NAME + '" พร้อมแล้ว');
+  Logger.log('โฟลเดอร์เก็บรูป: ' + folder.getName() + ' → ' + folder.getUrl());
+  Logger.log(hasSecret ? 'ORDER_SECRET ตั้งแล้ว ✓ ต่อไป Deploy → New deployment → Web app' : '⚠️ ยังไม่ได้ตั้ง ORDER_SECRET — Project Settings → Script Properties');
+}
+
+function ensureHeaders(sh) {
+  if (sh.getLastRow() === 0) sh.appendRow(HEADERS).setFrozenRows(1);
+}
+
+// โฟลเดอร์เก็บรูป: ใช้ id ที่จำไว้ ถ้าไม่มี/ถูกลบไปแล้ว → สร้างใหม่ข้าง Sheet (เรียกใต้ lock กันสร้างซ้ำ)
+function orderFolder() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('FOLDER_ID');
+  if (id) {
+    try {
+      const f = DriveApp.getFolderById(id);
+      if (!f.isTrashed()) return f;
+    } catch (err) { /* ไม่มีแล้ว / ไม่มีสิทธิ์ → สร้างใหม่ */ }
+  }
+  const parents = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId()).getParents();
+  const parent = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
+  const folder = parent.createFolder(FOLDER_NAME);
+  props.setProperty('FOLDER_ID', folder.getId());
+  return folder;
 }
 
 // data URL รูป → { type, data } (รับเฉพาะ jpeg/png/webp)

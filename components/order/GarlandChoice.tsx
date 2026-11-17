@@ -2,8 +2,6 @@ import { baht, CONFIG, GARLAND } from '@/lib/catalog';
 import type { GarlandPick } from '@/lib/garland';
 import { Icon } from '../Icon';
 
-const { shop, diy } = GARLAND.modes;
-
 // การ์ดพวงมาลัยรัดเกล้า (ขั้นตอนที่ 1) — กดเพื่อเพิ่ม/เอาออก + จำนวน
 // เลือกว่าให้ร้านมัดหรือซื้อไปทำเอง และเวลาคิว อยู่ในแถบสรุปคำสั่งจอง
 export function GarlandChoice({ value, onChange }: { value: GarlandPick | null; onChange: (g: GarlandPick | null) => void }) {
@@ -18,11 +16,7 @@ export function GarlandChoice({ value, onChange }: { value: GarlandPick | null; 
         </span>
         <span className="garland__text">
           <span className="choice__name">{GARLAND.name}</span>
-          <span className="garland__desc">{GARLAND.desc}</span>
-          <span className="garland__prices num">
-            <span>{shop.name} {baht(shop.price)}</span>
-            <span>{diy.name} {baht(diy.price)}</span>
-          </span>
+          <span className="choice__price num">{baht(GARLAND.price)} / {GARLAND.unit}</span>
         </span>
       </button>
       {value && (

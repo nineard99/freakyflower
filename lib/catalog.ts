@@ -37,11 +37,11 @@ export const GARLAND = {
   name: 'พวงมาลัยรัดเกล้า',
   unit: 'พวง',
   image: '/garland.jpg',
-  desc: 'มาลัยมะลิแซมคาร์เนชันชมพู สำหรับรัดผม',
+  price: 150, // ต่อพวง ราคาเดียวทั้งให้ร้านมัดและซื้อไปทำเอง — TODO: ราคาตัวอย่าง ใส่ราคาจริง
   modes: {
-    shop: { name: 'ให้ร้านมัดให้', price: 150 }, // TODO: ราคาตัวอย่าง ใส่ราคาจริง
-    diy: { name: 'ซื้อไปทำเอง', price: 120 }, // TODO: ราคาตัวอย่าง ใส่ราคาจริง
-  } satisfies Record<GarlandMode, { name: string; price: number }>,
+    shop: { name: 'ให้ร้านมัดให้' },
+    diy: { name: 'ซื้อไปทำเอง' },
+  } satisfies Record<GarlandMode, { name: string }>,
   queue: { from: '15:00', to: '20:50', step: 10 }, // คิวสุดท้าย 20:50 (มัดเสร็จราว 3 ทุ่ม)
 };
 export const GARLAND_SLOTS = timeSlots(GARLAND.queue.from, GARLAND.queue.to, GARLAND.queue.step);

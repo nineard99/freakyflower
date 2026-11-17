@@ -5,8 +5,8 @@ import { baht, CONFIG, GARLAND, type GarlandMode } from './catalog';
 
 export type GarlandPick = { qty: number; mode: GarlandMode };
 
-export const garlandUnit = (g: GarlandPick) => GARLAND.modes[g.mode].price;
-export const garlandTotal = (g: GarlandPick | null) => (g ? garlandUnit(g) * g.qty : 0);
+// ราคาเดียวกันทั้งให้ร้านมัดและซื้อไปทำเอง
+export const garlandTotal = (g: GarlandPick | null) => (g ? GARLAND.price * g.qty : 0);
 
 // ต้องเลือกเวลารับ (ทุก 30 นาที) เมื่อมีช่อดอกไม้ หรือพวงมาลัยแบบซื้อไปทำเอง
 export const needsPickup = (lineCount: number, g: GarlandPick | null) => lineCount > 0 || g?.mode === 'diy';
@@ -26,5 +26,5 @@ export function sanitizeGarland(raw: unknown): GarlandPick | null | undefined {
 
 // ข้อความที่ส่งเข้า Sheet
 export const garlandText = (g: GarlandPick, queue: string) =>
-  `${GARLAND.name} × ${g.qty} ${GARLAND.unit} · ${GARLAND.modes[g.mode].name} (${baht(garlandUnit(g))}/${GARLAND.unit})` +
+  `${GARLAND.name} × ${g.qty} ${GARLAND.unit} · ${GARLAND.modes[g.mode].name} (${baht(GARLAND.price)}/${GARLAND.unit})` +
   (g.mode === 'shop' && queue ? `\n   คิวมัด ${queue} น.` : '');

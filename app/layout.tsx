@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/next';
 import { IBM_Plex_Sans_Thai, Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
@@ -18,7 +19,11 @@ export const viewport: Viewport = { themeColor: '#fbfaf6', colorScheme: 'light' 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="th" className={`${display.variable} ${body.variable} ${thai.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* นับคนเข้าเว็บ (Vercel Web Analytics — ไม่ใช้ cookie) ดูได้ที่ Vercel → โปรเจกต์ → Analytics */}
+        <Analytics />
+      </body>
     </html>
   );
 }

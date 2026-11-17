@@ -11,20 +11,40 @@ export const CONFIG = {
   maxQty: 10, // จำนวนช่อสูงสุดต่อรายการ
   lineId: '@onlyflower', // TODO: ใส่ LINE OA จริง
   phone: '08x-xxx-xxxx', // TODO: ใส่เบอร์จริง
+  instagram: 'freakyflowers.bkk',
 };
 
 /* ---------- Pre-order วันลอยกระทง (หน้าแรก) ---------- */
-// รับช่อได้วันเดียว เฉพาะเวลาทำการ — ลูกค้าเลือกเวลารับเป็นช่วงละ step นาที
-// แก้เวลาแล้วต้องแก้ PICKUP_FROM / PICKUP_TO ใน scripts/loykrathong-apps-script.gs ให้ตรงกันด้วย
-export const PICKUP = { date: '24 พ.ย.', from: '14:00', to: '21:30', step: 30, place: 'หน้าร้าน' };
+// รับของได้วันเดียว เฉพาะเวลาทำการ — ลูกค้าเลือกเวลารับเป็นช่วงละ step นาที
+// แก้เวลาแล้วต้องแก้ PICKUP_FROM / PICKUP_TO / QUEUE_FROM / QUEUE_TO ใน scripts/loykrathong-apps-script.gs ให้ตรงกันด้วย
+export const PICKUP = { date: '24 พ.ย.', from: '15:00', to: '21:00', step: 30, place: 'หน้าร้าน' };
 const toMin = (hm: string) => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
-export const PICKUP_SLOTS: string[] = (() => {
+const timeSlots = (from: string, to: string, step: number) => {
   const out: string[] = [];
-  for (let t = toMin(PICKUP.from); t <= toMin(PICKUP.to); t += PICKUP.step) {
+  for (let t = toMin(from); t <= toMin(to); t += step) {
     out.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`);
   }
   return out;
-})();
+};
+// เวลารับช่อดอกไม้ (และพวงมาลัยแบบซื้อไปทำเอง) — ทุก 30 นาที
+export const PICKUP_SLOTS = timeSlots(PICKUP.from, PICKUP.to, PICKUP.step);
+
+/* ---------- พวงมาลัยรัดเกล้า ---------- */
+// ให้ร้านมัดให้ = ต้องจองคิวมัด ทุก 10 นาที (1 คิว = 1 ออเดอร์ — ระบบเช็กคิวที่ถูกจองแล้วจาก Sheet)
+// ซื้อไปทำเอง = รับพร้อมช่อดอกไม้ (เวลาเดียวกับช่อ)
+export type GarlandMode = 'shop' | 'diy';
+export const GARLAND = {
+  name: 'พวงมาลัยรัดเกล้า',
+  unit: 'พวง',
+  image: '/garland.jpg',
+  desc: 'มาลัยมะลิแซมคาร์เนชันชมพู สำหรับรัดผม',
+  modes: {
+    shop: { name: 'ให้ร้านมัดให้', price: 150 }, // TODO: ราคาตัวอย่าง ใส่ราคาจริง
+    diy: { name: 'ซื้อไปทำเอง', price: 120 }, // TODO: ราคาตัวอย่าง ใส่ราคาจริง
+  } satisfies Record<GarlandMode, { name: string; price: number }>,
+  queue: { from: '15:00', to: '20:50', step: 10 }, // คิวสุดท้าย 20:50 (มัดเสร็จราว 3 ทุ่ม)
+};
+export const GARLAND_SLOTS = timeSlots(GARLAND.queue.from, GARLAND.queue.to, GARLAND.queue.step);
 
 // ที่ตั้งร้าน (แผนที่ก่อนขั้นตอนเลือกช่อ) — กันลูกค้าที่ไม่ได้อยู่แถว มจธ. บางมด จองผิด
 // TODO: ใส่พิกัดจริงของร้าน (Google Maps → คลิกขวาที่หมุด → คัดลอกตัวเลขพิกัด) และรายละเอียดจุดรับ
@@ -38,7 +58,7 @@ export const SHOP_LOCATION = {
 export const LOYKRATHONG = {
   eyebrow: 'Pre-order', // บรรทัดเล็กเหนือหัวเรื่อง (อักษรละติน — แสดงเป็นตัวพิมพ์ใหญ่)
   title: 'วันลอยกระทง',
-  detail: 'เลือกช่อ กรอกข้อมูล โอนตาม QR แล้วแนบสลิป ร้านจัดช่อให้พร้อมรับตามเวลาที่เลือก', // วัน เวลา สถานที่รับ แสดงจาก PICKUP
+  detail: 'เลือกช่อดอกไม้หรือพวงมาลัยรัดเกล้า กรอกข้อมูล เลือกเวลารับ แล้วกดยืนยันเพื่อโอนตาม QR และแนบสลิป', // วัน เวลา สถานที่รับ แสดงจาก PICKUP
   qrImage: '/loykrathong-qr.png', // วางรูป QR ชำระเงินที่ public/loykrathong-qr.png
   accountName: '', // TODO: ชื่อบัญชีที่แสดงใต้ QR (ไม่ใส่ก็ได้)
   // URL ระบบรับออเดอร์ (Apps Script) อยู่ใน env: APPS_SCRIPT_URL — ดู .env.example
@@ -97,18 +117,14 @@ export const flowerImg = (type: string, color: string) => `/flowers/${type}-${co
 export const WRAP_PRICE = 50; // ค่าห่อ + ริบบิ้น (ราคาตัวอย่าง)
 export const FILM_PRICE: number = 0; // ค่าฟิล์มใสห่อทับกระดาษ (0 = ไม่คิดเพิ่ม) — TODO: ใส่ราคาจริงถ้าคิดเพิ่ม
 
+// ร้านมีกระดาษหนังสือพิมพ์กับริบบิ้นขาวอย่างละแบบเดียว — มีตัวเลือกเดียว หน้าเว็บจะไม่แสดงตัวเลือก (แสดงเป็นข้อความแทน)
+// อยากเพิ่มสี: เพิ่มรายการต่อท้าย (ตัวที่ 0 = ค่าเริ่มต้น) แล้วตัวเลือกจะกลับมาเอง
 export type Paper = { name: string; kind: 'news' | 'matte'; color: string };
 export const PAPERS: Paper[] = [
   { name: 'หนังสือพิมพ์', kind: 'news', color: '#e4cfa6' },
-  { name: 'ชมพูพีช', kind: 'matte', color: '#f7dccf' },
-  { name: 'ชมพูอ่อน', kind: 'matte', color: '#f5cdd8' },
-  { name: 'ขาว', kind: 'matte', color: '#f8f6f2' },
-  { name: 'ลาเวนเดอร์', kind: 'matte', color: '#ddcfee' },
-  { name: 'ดำ', kind: 'matte', color: '#2f2b30' },
 ];
 export const RIBBONS: [string, string][] = [
-  ['ขาว', '#ffffff'], ['ครีม', '#efe3cc'], ['ชมพู', '#e9a3bb'],
-  ['แดง', '#c1121f'], ['ทอง', '#c9a15b'], ['ดำ', '#222222'],
+  ['ขาว', '#ffffff'],
 ];
 
 /* ---------- แบบช่อ ---------- */
@@ -151,8 +167,8 @@ export const TEMPLATES: Template[] = [
     ],
   },
   {
-    id: 'orange-gerbera', name: 'เยอบีร่าส้ม', desc: 'เยอบีร่าส้ม 2 ดอก แซมสแตติสม่วงและยิปโซ ห่อกระดาษชมพูพีช',
-    paper: 1, ribbon: 0,
+    id: 'orange-gerbera', name: 'เยอบีร่าส้ม', desc: 'เยอบีร่าส้ม 2 ดอก แซมสแตติสม่วงและยิปโซ ห่อหนังสือพิมพ์',
+    paper: 0, ribbon: 0,
     items: [
       ['statice', 'purple', 222, 140, 0], ['gypsophila', 'white', 256, 150, 12],
       ['daisy', 'white', 148, 238, 0],

@@ -14,14 +14,14 @@ export function ShopMap({ enterIndex }: { enterIndex: number }) {
         <span className="where__pin" aria-hidden><Icon name="map-pin" size={18} /></span>
         <div>
           <h2 id="where-title" className="where__title">ร้านอยู่แถว {SHOP_LOCATION.area}</h2>
-          <p className="where__lead">มารับช่อเองที่ร้านเท่านั้น เช็กตำแหน่งให้แน่ใจก่อนจอง</p>
+          <p className="where__lead">มารับของเองที่ร้านเท่านั้น เช็กตำแหน่งให้แน่ใจก่อนจอง</p>
         </div>
       </header>
       <div className="where__map">
         <iframe src={EMBED} title={`แผนที่ร้าน ${SHOP_LOCATION.area}`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
       </div>
       <dl className="where__facts">
-        <div><dt>วันรับช่อ</dt><dd className="num">{PICKUP.date}</dd></div>
+        <div><dt>วันรับของ</dt><dd className="num">{PICKUP.date}</dd></div>
         <div><dt>ช่วงเวลา</dt><dd className="num">{PICKUP.from}–{PICKUP.to} น.</dd></div>
         <div><dt>จุดรับ</dt><dd>{PICKUP.place}</dd></div>
       </dl>

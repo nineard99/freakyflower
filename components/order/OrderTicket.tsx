@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import type { ResolvedLine } from '@/lib/cart';
-import { baht, PICKUP } from '@/lib/catalog';
+import { baht, GARLAND, PICKUP } from '@/lib/catalog';
+import type { GarlandPick } from '@/lib/garland';
 import { BouquetSvg } from '../BouquetSvg';
 import { Icon } from '../Icon';
 
@@ -16,10 +17,15 @@ const PETALS = Array.from({ length: 18 }, (_, i) => ({
 }));
 
 // หน้าจองสำเร็จ — ลูกค้าแคปหน้าจอนี้ไว้แสดงตอนรับช่อ
-export function OrderTicket({ orderNo, lines, total, pickup }: { orderNo: string; lines: ResolvedLine[]; total: number; pickup: string }) {
+export function OrderTicket({ orderNo, lines, garland, total, pickup, queue }: {
+  orderNo: string; lines: ResolvedLine[]; garland: GarlandPick | null; total: number; pickup: string; queue: string;
+}) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { titleRef.current?.focus({ preventScroll: true }); }, []);
-  const arts = lines.slice(0, 4);
+  // ภาพสูงสุด 4 ช่อง — พวงมาลัยกินหนึ่งช่อง
+  const max = garland ? 3 : 4;
+  const arts = lines.slice(0, max);
+  const tiles = arts.length + (garland ? 1 : 0);
 
   return (
     <main className="wrap done">
@@ -32,24 +38,28 @@ export function OrderTicket({ orderNo, lines, total, pickup }: { orderNo: string
         <header className="ticket__head">
           <span className="ticket__check" aria-hidden><Icon name="check" size={28} strokeWidth={2.2} className="draw" /></span>
           <h1 ref={titleRef} tabIndex={-1} className="ticket__title">จองสำเร็จ</h1>
-          <p className="muted">บันทึกภาพหน้าจอนี้ไว้ แล้วแสดงตอนรับช่อที่{PICKUP.place}</p>
+          <p className="muted">บันทึกภาพหน้าจอนี้ไว้ แล้วแสดงตอนรับของที่{PICKUP.place}</p>
         </header>
         <div className="ticket__no">
           <span className="stat__label">เลขออเดอร์</span>
           <strong className="num">{orderNo}</strong>
         </div>
         <div className="ticket__body">
-          <div className="ticket__arts" data-n={arts.length}>
+          <div className="ticket__arts" data-n={tiles}>
             {arts.map((r, i) => (
               <div key={r.line.id} className="ticket__art">
                 <BouquetSvg design={r.design} label={r.name} />
-                {i === 3 && lines.length > 4 && <span className="ticket__more num">+{lines.length - 4}</span>}
+                {i === max - 1 && lines.length > max && <span className="ticket__more num">+{lines.length - max}</span>}
               </div>
             ))}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {garland && <div className="ticket__art"><img src={GARLAND.image} alt={GARLAND.name} /></div>}
           </div>
           <dl className="ticket__facts">
-            <div><dt>ช่อ</dt><dd><ul className="ticket__lines">{lines.map((r) => <li key={r.line.id}>{r.name} <span className="num">× {r.line.qty}</span></li>)}</ul></dd></div>
-            <div><dt>รับช่อ</dt><dd className="num">{PICKUP.date} · {pickup} น.</dd></div>
+            {lines.length > 0 && <div><dt>ช่อ</dt><dd><ul className="ticket__lines">{lines.map((r) => <li key={r.line.id}>{r.name} <span className="num">× {r.line.qty}</span></li>)}</ul></dd></div>}
+            {garland && <div><dt>พวงมาลัย</dt><dd className="num">{GARLAND.modes[garland.mode].name} × {garland.qty}</dd></div>}
+            {pickup && <div><dt>เวลารับ</dt><dd className="num">{PICKUP.date} · {pickup} น.</dd></div>}
+            {queue && <div><dt>คิวมัดพวงมาลัย</dt><dd className="num">{PICKUP.date} · {queue} น.</dd></div>}
             <div><dt>ยอดชำระ</dt><dd className="num">{baht(total)}</dd></div>
           </dl>
         </div>

@@ -251,27 +251,25 @@ export function Builder({ onClose }: { onClose: () => void }) {
             {sel ? <SelectedTools it={sel} /> : <p className="insp__empty">แตะดอกไม้ในช่อเพื่อเปลี่ยนสีหรือปรับองศา</p>}
           </section>
 
+          {/* ร้านมีกระดาษ/ริบบิ้นแบบเดียว → แสดงเป็นข้อความ · มีหลายแบบเมื่อไหร่ ตัวเลือกจะขึ้นเอง */}
           <section className="insp">
             <div className="insp__head">
-              <h3 className="insp__title">กระดาษห่อ</h3>
-              <span className="insp__value">{PAPERS[design.paper].name}</span>
+              <h3 className="insp__title">การห่อ</h3>
+              <span className="insp__value">กระดาษ{PAPERS[design.paper].name} · ริบบิ้น{RIBBONS[design.ribbon][0]}</span>
             </div>
-            <Swatches
-              label="กระดาษห่อ" value={String(design.paper)} onChange={(k) => b.setPaper(+k)}
-              items={PAPERS.map((p, i) => ({ key: String(i), name: p.name, color: p.color, pattern: p.kind === 'news' }))}
-            />
+            {PAPERS.length > 1 && (
+              <Swatches
+                label="กระดาษห่อ" value={String(design.paper)} onChange={(k) => b.setPaper(+k)}
+                items={PAPERS.map((p, i) => ({ key: String(i), name: p.name, color: p.color, pattern: p.kind === 'news' }))}
+              />
+            )}
+            {RIBBONS.length > 1 && (
+              <Swatches
+                label="ริบบิ้น" value={String(design.ribbon)} onChange={(k) => b.setRibbon(+k)}
+                items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
+              />
+            )}
             <FilmToggle checked={b.draftFilm} onChange={b.setDraftFilm} />
-          </section>
-
-          <section className="insp">
-            <div className="insp__head">
-              <h3 className="insp__title">ริบบิ้น</h3>
-              <span className="insp__value">{RIBBONS[design.ribbon][0]}</span>
-            </div>
-            <Swatches
-              label="ริบบิ้น" value={String(design.ribbon)} onChange={(k) => b.setRibbon(+k)}
-              items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
-            />
           </section>
 
           <section className="insp">

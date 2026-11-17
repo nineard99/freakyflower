@@ -15,19 +15,36 @@
  *    กด Authorize แล้วคัดลอก Web app URL (ลงท้าย /exec)
  * 5. ใส่ URL ที่ APPS_SCRIPT_URL ใน .env.local และ Vercel (หน้าเว็บส่งออเดอร์ผ่าน /api/order ของเรา ไม่ได้ยิงมาที่นี่ตรงๆ)
  * แก้โค้ดนี้ทีหลัง ต้อง Deploy → Manage deployments → Edit → New version (URL เดิม)
+ *
+ * คิวมัดพวงมาลัย: 1 คิว = 1 ออเดอร์ — คิวที่อยู่ในคอลัมน์ "คิวมัดพวงมาลัย" ถือว่าเต็ม
+ * ยกเว้นแถวที่สถานะมีคำว่า "ยกเลิก" (แก้สถานะเป็น "ยกเลิก" = คืนคิวให้คนอื่นจองได้)
  */
 
 const SHEET_NAME = 'ลอยกระทง';
 // โฟลเดอร์เก็บสลิป — สร้างอัตโนมัติข้าง Sheet แล้วจำ id ไว้ใน Script Property "FOLDER_ID"
 // (อยากใช้โฟลเดอร์ที่มีอยู่แล้ว: ใส่ id จาก URL drive.google.com/drive/folders/<id> ใน Script Property FOLDER_ID เอง)
 const FOLDER_NAME = 'freakyflower — สลิปและรูปช่อ (ลอยกระทง)';
-// เวลารับช่อ (วันที่ 24 พ.ย. วันเดียว) — ต้องตรงกับ PICKUP ใน lib/catalog.ts
-const PICKUP_FROM = '14:00';
-const PICKUP_TO = '21:30';
-// ถ้ามี Sheet เดิมอยู่แล้ว: แทรกคอลัมน์ "เวลารับ" หลัง Instagram เองก่อน (หัวตารางสร้างอัตโนมัติเฉพาะ Sheet ว่าง)
+// เวลารับ (วันที่ 24 พ.ย. วันเดียว) — ต้องตรงกับ PICKUP และ GARLAND.queue ใน lib/catalog.ts
+const PICKUP_FROM = '15:00';
+const PICKUP_TO = '21:00';
+const QUEUE_FROM = '15:00';
+const QUEUE_TO = '20:50';
 const MAX_DESIGNS = 8; // = CONFIG.maxLines ใน lib/catalog.ts
-const HEADERS = ['เลขออเดอร์', 'เวลา', 'ชื่อ', 'เบอร์โทร', 'Instagram', 'เวลารับ (24 พ.ย.)', 'ช่อ', 'ยอด (บาท)', 'รูปช่อ', 'สลิป', 'สถานะ'];
+const HEADERS = ['เลขออเดอร์', 'เวลา', 'ชื่อ', 'เบอร์โทร', 'Instagram', 'เวลารับ (24 พ.ย.)', 'คิวมัดพวงมาลัย', 'รายการ', 'ยอด (บาท)', 'รูปช่อ', 'สลิป', 'สถานะ'];
+const QUEUE_COL = HEADERS.indexOf('คิวมัดพวงมาลัย') + 1;
 const DESIGN_COL = HEADERS.indexOf('รูปช่อ') + 1;
+const STATUS_COL = HEADERS.indexOf('สถานะ') + 1;
+
+// GET ?action=queue → คิวมัดที่ถูกจองแล้ว { ok, taken: ['15:10', ...] }
+function doGet(e) {
+  try {
+    if ((e && e.parameter && e.parameter.action) !== 'queue') throw new Error('unknown action');
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    return json({ ok: true, taken: sh ? takenQueues(sh) : [] });
+  } catch (err) {
+    return json({ ok: false, error: String(err && err.message || err) });
+  }
+}
 
 function doPost(e) {
   try {
@@ -38,8 +55,8 @@ function doPost(e) {
     const phone = String(d.phone || '').replace(/[\s-]/g, '');
     const ig = String(d.ig || '').trim().replace(/^@+/, '').slice(0, 60);
     const pickup = String(d.pickup || '').trim();
-    const bouquet = String(d.bouquet || '').slice(0, 4000);
-    const count = Math.max(1, Number(d.count) || 1);
+    const queue = String(d.queue || '').trim();
+    const items = String(d.items || '').slice(0, 4000);
     const total = Number(d.total) || 0;
     const slip = parseImage(d.slip);
     // รูปช่อ: ลิงก์ดูช่อ 3D รายการละลิงก์ (server ของเว็บสร้างให้)
@@ -47,10 +64,13 @@ function doPost(e) {
       .filter((u) => /^https?:\/\/[^\s]+\/view#[A-Za-z0-9_-]+$/.test(u));
     if (!name) throw new Error('missing name');
     if (!/^0\d{8,9}$/.test(phone)) throw new Error('invalid phone');
-    if (!/^\d{2}:\d{2}$/.test(pickup) || pickup < PICKUP_FROM || pickup > PICKUP_TO) throw new Error('invalid pickup time');
+    if (pickup && (!/^\d{2}:\d{2}$/.test(pickup) || pickup < PICKUP_FROM || pickup > PICKUP_TO)) throw new Error('invalid pickup time');
+    if (queue && (!/^\d{2}:\d{2}$/.test(queue) || queue < QUEUE_FROM || queue > QUEUE_TO)) throw new Error('invalid queue time');
+    if (!pickup && !queue) throw new Error('missing pickup time');
     if (!slip) throw new Error('missing slip');
 
-    // จองแถว + เลขออเดอร์ใต้ lock สั้นๆ แล้วค่อยเซฟไฟล์ (เซฟหลายรูปใช้เวลา ไม่ให้ออเดอร์อื่นรอ lock นาน)
+    // จองแถว + เลขออเดอร์ + คิวมัด ใต้ lock สั้นๆ แล้วค่อยเซฟไฟล์ (เซฟหลายรูปใช้เวลา ไม่ให้ออเดอร์อื่นรอ lock นาน)
+    // คิวเขียนลงแถวตั้งแต่ตอนจอง → ออเดอร์ที่ตามมาเห็นว่าคิวนี้เต็มแล้วทันที
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
     const lock = LockService.getScriptLock();
@@ -58,9 +78,12 @@ function doPost(e) {
     let row, orderNo, folder;
     try {
       ensureHeaders(sh);
+      if (queue && takenQueues(sh).indexOf(queue) !== -1) throw new Error('queue taken');
       folder = orderFolder();
       orderNo = 'LK-' + String(sh.getLastRow()).padStart(3, '0');
-      sh.appendRow([orderNo, new Date(), '', '', '', '', '', '', '', '', 'กำลังบันทึก']);
+      const blank = HEADERS.map(() => '');
+      blank[0] = orderNo; blank[1] = new Date(); blank[QUEUE_COL - 1] = queue ? queue + ' น.' : ''; blank[STATUS_COL - 1] = 'กำลังบันทึก';
+      sh.appendRow(blank);
       row = sh.getLastRow();
     } finally {
       lock.releaseLock();
@@ -69,7 +92,10 @@ function doPost(e) {
     const save = (img, suffix) => folder.createFile(Utilities.newBlob(Utilities.base64Decode(img.data), img.type, orderNo + '-' + suffix)).getUrl();
     const slipUrl = save(slip, 'slip');
 
-    sh.getRange(row, 3, 1, 9).setValues([[safe(name), "'" + phone, ig ? '@' + safe(ig) : '', pickup + ' น.', safe(count + ' ช่อ\n' + bouquet), total, '', slipUrl, 'รอตรวจสลิป']]);
+    sh.getRange(row, 3, 1, STATUS_COL - 2).setValues([[
+      safe(name), "'" + phone, ig ? '@' + safe(ig) : '', pickup ? pickup + ' น.' : '-', queue ? queue + ' น.' : '-',
+      safe(items), total, '', slipUrl, 'รอตรวจสลิป',
+    ]]);
     if (views.length) sh.getRange(row, DESIGN_COL).setRichTextValue(linkLines(views));
     return json({ ok: true, orderNo: orderNo });
   } catch (err) {
@@ -89,8 +115,27 @@ function setup() {
   Logger.log(hasSecret ? 'ORDER_SECRET ตั้งแล้ว ✓ ต่อไป Deploy → New deployment → Web app' : '⚠️ ยังไม่ได้ตั้ง ORDER_SECRET — Project Settings → Script Properties');
 }
 
+// Sheet ว่าง → สร้างหัวตาราง · Sheet รุ่นเก่า (ยังไม่มีคอลัมน์คิว) → แทรกคอลัมน์ "คิวมัดพวงมาลัย" ให้เอง
 function ensureHeaders(sh) {
-  if (sh.getLastRow() === 0) sh.appendRow(HEADERS).setFrozenRows(1);
+  if (sh.getLastRow() === 0) { sh.appendRow(HEADERS).setFrozenRows(1); return; }
+  if (sh.getRange(1, QUEUE_COL).getValue() !== HEADERS[QUEUE_COL - 1]) {
+    sh.insertColumnBefore(QUEUE_COL);
+    sh.getRange(1, QUEUE_COL).setValue(HEADERS[QUEUE_COL - 1]);
+  }
+}
+
+// คิวที่ถูกจองแล้ว (ไม่นับแถวที่สถานะ "ยกเลิก")
+function takenQueues(sh) {
+  const n = sh.getLastRow() - 1;
+  if (n < 1 || sh.getRange(1, QUEUE_COL).getValue() !== HEADERS[QUEUE_COL - 1]) return [];
+  const queues = sh.getRange(2, QUEUE_COL, n, 1).getDisplayValues();
+  const status = sh.getRange(2, STATUS_COL, n, 1).getDisplayValues();
+  const out = [];
+  queues.forEach((r, i) => {
+    const m = /(\d{1,2}):(\d{2})/.exec(r[0]);
+    if (m && status[i][0].indexOf('ยกเลิก') === -1) out.push(m[1].padStart(2, '0') + ':' + m[2]);
+  });
+  return out;
 }
 
 // หนึ่งเซลล์ หลายลิงก์ บรรทัดละช่อ (เรียงตามรายการในคอลัมน์ "ช่อ") — กดแล้วเปิดหน้าดู 3D

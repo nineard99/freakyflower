@@ -189,6 +189,10 @@ img, svg { max-width: 100%; }
 }
 .tsel__opt[data-active] { border-color: var(--ink); background: var(--hover-wash); }
 .tsel__opt[aria-selected="true"] { background: var(--ink-fill); border-color: var(--ink-fill); color: var(--on-ink-fill); }
+.tsel__opt[aria-disabled="true"] { border-style: dashed; color: var(--ink-disabled); text-decoration: line-through; cursor: not-allowed; }
+.tsel__opt[aria-disabled="true"][data-active] { background: none; }
+/* ในแถบสรุป (เลื่อนในตัวได้) แผงเวลาแทรกในเนื้อหาแทนการลอย — ไม่ถูกขอบแถบตัด */
+.rail .tsel__panel { position: static; min-width: 0; max-height: none; margin-top: var(--space-2); }
 @media (pointer: coarse) { .tsel__opt { height: var(--control-s); } }
 /* iOS ซูมหน้าเมื่อโฟกัสช่องที่ตัวอักษรเล็กกว่า 16px */
 @media (pointer: coarse) { .input, .tsel__btn, .textarea { font-size: 16px; } }
@@ -492,6 +496,11 @@ img, svg { max-width: 100%; }
 .rail__detail summary { width: fit-content; color: var(--ink-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .rail__detail[open] summary { margin-bottom: var(--space-2); }
 .rail__detail .sum__total { display: none; }
+.rail__sec { display: grid; gap: var(--space-3); padding-top: var(--space-4); border-top: var(--border-hairline) solid var(--line); }
+.rail__title + .rail__sec { padding-top: 0; border-top: 0; }
+.rail__sec-title { font: 500 13px/20px var(--font-body); color: var(--ink-muted); }
+.rail__art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rail__time { gap: var(--space-1); }
 .rail__note { font-size: 12px; line-height: 18px; color: var(--ink-muted); text-align: center; }
 @media (min-width: 980px) {
   .order { grid-template-columns: minmax(0, 1fr) 360px; column-gap: var(--space-12); padding-bottom: var(--space-24); }
@@ -510,7 +519,24 @@ img, svg { max-width: 100%; }
 .sum__total strong { font: 600 24px/32px var(--font-display); }
 
 .site-foot { border-top: var(--border-hairline) solid var(--line); }
+.site-foot__ig { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
 .site-foot__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-6); padding-block: var(--space-6) calc(var(--space-6) + env(safe-area-inset-bottom, 0px)); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+
+/* พวงมาลัยรัดเกล้า (ขั้นตอนที่ 1): การ์ดแนวนอน รูป + ชื่อ + ราคาสองแบบ */
+.garland { display: grid; gap: var(--space-2); }
+.garland__card { grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: var(--space-4); padding: var(--space-2); }
+.garland__img { display: block; width: 96px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--radius-box); background: var(--paper-sunken); }
+.garland__text { display: grid; gap: 2px; min-width: 0; padding-right: var(--space-8); }
+.garland__text .choice__name { padding: 0; }
+.garland__desc { font-size: 13px; line-height: 20px; opacity: .72; }
+.garland__prices { display: grid; margin-top: var(--space-1); font-size: 13px; line-height: 20px; }
+.garland__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+@media (min-width: 640px) { .garland__card { grid-template-columns: 120px minmax(0, 1fr); } .garland__img { width: 120px; } }
+
+/* ---------- ชำระเงิน (หลังกดยืนยันการจอง) ---------- */
+.paynow__back { justify-self: start; margin: calc(var(--space-2) * -1) 0 0 calc(var(--space-2) * -1); }
+.paynow .ticket__facts dd { overflow-wrap: anywhere; }
+.paynow__relink { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
 
 /* ---------- จองสำเร็จ ---------- */
 .done { display: grid; justify-items: center; padding-block: var(--space-8) var(--space-16); }
@@ -529,6 +555,7 @@ img, svg { max-width: 100%; }
 .ticket__lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .ticket__art { border: var(--border-hairline) solid var(--line); border-radius: var(--radius-box); background: var(--paper); overflow: hidden; }
 .ticket__art svg { display: block; width: 100%; aspect-ratio: 400 / 520; }
+.ticket__art img { display: block; width: 100%; aspect-ratio: 400 / 520; object-fit: cover; }
 .ticket__facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: 10px 0; border-top: var(--border-hairline) solid var(--line); }
 .ticket__facts > div:first-child { border-top: 0; }
 .ticket__facts dt { font-size: 13px; line-height: 20px; color: var(--ink-muted); }
@@ -653,19 +680,6 @@ img, svg { max-width: 100%; }
   .shop__preview { position: sticky; top: calc(var(--topbar-h) + var(--space-6)); grid-template-columns: minmax(0, 1fr); }
   .shop__empty { font-size: 13px; line-height: 20px; padding: var(--space-6); }
 }
-
-/* ---------- credits ---------- */
-.credits { display: grid; gap: var(--space-8); padding-block: var(--space-10) var(--space-16); }
-.credits__head { display: grid; gap: var(--space-3); }
-.credits__title { font-size: clamp(28px, 4.4vw, 40px); line-height: 1.5; }
-.credits .hero__lead { max-width: 64ch; font-size: 15px; line-height: 26px; }
-.table-wrap { border: var(--border-hairline) solid var(--line); border-radius: var(--radius-box); background: var(--paper-raised); overflow-x: auto; }
-.table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 20px; }
-.table th { height: 40px; padding: 0 var(--space-4); border-bottom: var(--border-hairline) solid var(--line); font-weight: 600; color: var(--ink-muted); text-align: left; white-space: nowrap; }
-.table td { height: 56px; padding: var(--space-2) var(--space-4); border-bottom: var(--border-hairline) solid var(--line); vertical-align: middle; }
-.table tr:last-child td { border-bottom: 0; }
-.table tbody tr:hover td { background: var(--hover-wash); }
-.table td img { margin-right: var(--space-3); object-fit: contain; vertical-align: middle; }
 
 /* ---------- motion ----------
    UI: เปลี่ยนสี/ความทึบสั้นๆ เท่านั้น — ไม่เลื่อน ไม่เด้ง ไม่ย่อขยาย

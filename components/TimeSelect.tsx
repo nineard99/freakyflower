@@ -5,6 +5,7 @@ import { Icon } from './Icon';
 
 // dropdown เลือกเวลา — ปุ่ม pill เปิดแผง (กล่อง 2px) ที่แบ่งช่วง บ่าย / เย็น / ค่ำ เป็นตารางชิปเวลา
 // pattern: button + listbox (aria-activedescendant) · ลูกศรเลื่อน (ขึ้น/ลง = ทีละแถว) · Enter/Space เลือก · Esc ปิด
+// full = เวลาที่เต็มแล้ว (คิวมัดพวงมาลัย) — ยังโฟกัสผ่านได้ แต่เลือกไม่ได้
 const COLS = 4;
 const PERIODS: { name: string; until: number }[] = [
   { name: 'บ่าย', until: 17 * 60 },
@@ -22,9 +23,11 @@ type Props = {
   invalid?: boolean;
   describedBy?: string;
   labelledBy?: string;
+  full?: string[];
+  onOpen?: () => void; // เปิดแผง — ใช้โหลดคิวที่เต็มล่าสุด
 };
 
-export function TimeSelect({ id, slots, value, onChange, placeholder = 'เลือกเวลา', invalid, describedBy, labelledBy }: Props) {
+export function TimeSelect({ id, slots, value, onChange, placeholder = 'เลือกเวลา', invalid, describedBy, labelledBy, full = [], onOpen }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -39,15 +42,18 @@ export function TimeSelect({ id, slots, value, onChange, placeholder = 'เล�
     items: slots.map((t, i) => ({ t, i })).filter(({ t }) => toMin(t) < p.until && (gi === 0 || toMin(t) >= PERIODS[gi - 1].until)),
   })).filter((g) => g.items.length);
 
+  const isFull = (t: string) => full.includes(t);
   const show = () => {
-    setActive(Math.max(0, slots.indexOf(value)));
+    const cur = slots.indexOf(value);
+    setActive(cur >= 0 ? cur : Math.max(0, slots.findIndex((t) => !isFull(t))));
     setOpen(true);
+    onOpen?.();
   };
   const close = (refocus = true) => {
     setOpen(false);
     if (refocus) btnRef.current?.focus({ preventScroll: true });
   };
-  const pick = (t: string) => { onChange(t); close(); };
+  const pick = (t: string) => { if (isFull(t)) return; onChange(t); close(); };
 
   useEffect(() => {
     if (!open) return;
@@ -122,6 +128,7 @@ export function TimeSelect({ id, slots, value, onChange, placeholder = 'เล�
                 {g.items.map(({ t, i }) => (
                   <div
                     key={t} id={optId(i)} role="option" aria-selected={t === value}
+                    aria-disabled={isFull(t) || undefined} aria-label={isFull(t) ? `${t} เต็มแล้ว` : undefined}
                     className="tsel__opt num" data-active={i === active || undefined}
                     onPointerEnter={() => setActive(i)}
                     onClick={() => pick(t)}

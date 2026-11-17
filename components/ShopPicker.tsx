@@ -101,20 +101,24 @@ export function ShopPicker({ onClose }: { onClose: () => void }) {
               <p className="shop__hint">กระดาษ{PAPERS[shop.paper].name} · ริบบิ้น{RIBBONS[shop.ribbon][0]}</p>
             </header>
             <div className="shop__wrap">
-              <div className="insp__row">
-                <span className="insp__label">กระดาษ</span>
-                <Swatches
-                  label="กระดาษห่อ" value={String(shop.paper)} onChange={(k) => setShop((s) => ({ ...s, paper: +k }))}
-                  items={PAPERS.map((p, i) => ({ key: String(i), name: p.name, color: p.color, pattern: p.kind === 'news' }))}
-                />
-              </div>
-              <div className="insp__row">
-                <span className="insp__label">ริบบิ้น</span>
-                <Swatches
-                  label="ริบบิ้น" value={String(shop.ribbon)} onChange={(k) => setShop((s) => ({ ...s, ribbon: +k }))}
-                  items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
-                />
-              </div>
+              {PAPERS.length > 1 && (
+                <div className="insp__row">
+                  <span className="insp__label">กระดาษ</span>
+                  <Swatches
+                    label="กระดาษห่อ" value={String(shop.paper)} onChange={(k) => setShop((s) => ({ ...s, paper: +k }))}
+                    items={PAPERS.map((p, i) => ({ key: String(i), name: p.name, color: p.color, pattern: p.kind === 'news' }))}
+                  />
+                </div>
+              )}
+              {RIBBONS.length > 1 && (
+                <div className="insp__row">
+                  <span className="insp__label">ริบบิ้น</span>
+                  <Swatches
+                    label="ริบบิ้น" value={String(shop.ribbon)} onChange={(k) => setShop((s) => ({ ...s, ribbon: +k }))}
+                    items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
+                  />
+                </div>
+              )}
               <FilmToggle checked={draftFilm} onChange={setDraftFilm} />
             </div>
           </section>

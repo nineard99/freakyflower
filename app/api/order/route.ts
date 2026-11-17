@@ -38,6 +38,10 @@ export async function POST(request: Request) {
       cache: 'no-store',
     });
     const data = (await res.json()) as { ok?: boolean; orderNo?: string; error?: string };
+    // คิวมัดพวงมาลัยถูกคนอื่นจองตัดหน้า (Apps Script เช็กใต้ lock)
+    if (data.error === 'queue taken') {
+      return reply({ ok: false, code: 'queue', error: `คิวมัดพวงมาลัย ${v.order.queue} น. เพิ่งถูกจองไป กลับไปเลือกคิวใหม่ แล้วส่งสลิปอีกครั้ง` }, 409);
+    }
     if (!data.ok || !data.orderNo) {
       console.error('[order] Apps Script ปฏิเสธ:', data.error);
       return reply({ ok: false, error: 'บันทึกออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง LINE' }, 502);

@@ -92,12 +92,12 @@ const c = (id: string, name: string, hex: string): FlowerColor => ({ id, name, h
 export const FLOWERS: Record<string, Flower> = {
   rose: {
     name: 'กุหลาบ', en: 'Rose', price: 60, unit: 'ดอก', role: 'main', size: 0.9, stem: 'rose',
-    colors: [c('red', 'แดง', '#c8274a'), c('pink', 'ชมพู', '#e9559a'), c('peach', 'ชมพูพีช', '#f4b9a8'), c('white', 'ขาว', '#f6f1e6'), c('yellow', 'เหลือง', '#f1d65a')],
+    colors: [c('red', 'แดง', '#c8274a'), c('white', 'ขาว', '#f6f1e6')],
   },
-  sunflower: { name: 'ทานตะวัน', en: 'Sunflower', price: 80, unit: 'ดอก', role: 'main', size: 1.15, stem: 'sunflower', colors: [c('yellow', 'เหลือง', '#f6c514'), c('orange', 'เหลืองส้ม', '#f0a417')] },
+  sunflower: { name: 'ทานตะวัน', en: 'Sunflower', price: 80, unit: 'ดอก', role: 'main', size: 1.15, stem: 'sunflower', colors: [c('yellow', 'เหลือง', '#f6c514')] },
   gerbera: {
     name: 'เยอบีร่า', en: 'Gerbera', price: 45, unit: 'ดอก', role: 'main', size: 0.98, stem: 'gerbera',
-    colors: [c('orange', 'ส้ม', '#f7901e'), c('pink', 'ชมพูแซลมอน', '#f27b7b'), c('lightpink', 'ชมพูอ่อน', '#f3c6d3'), c('yellow', 'เหลือง', '#f5c016'), c('red', 'แดง', '#e8411c')],
+    colors: [c('lightpink', 'ชมพูอ่อน', '#f3c6d3'), c('red', 'แดง', '#e8411c'), c('orange', 'ส้ม', '#f7901e')],
   },
   carnation: {
     name: 'คาร์เนชัน', en: 'Carnation', price: 45, unit: 'ดอก', role: 'main', size: 0.72, stem: 'carnation',

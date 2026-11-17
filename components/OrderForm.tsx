@@ -29,7 +29,7 @@ type Errors = Partial<Record<Field, string>>;
 const FIELD_ORDER: Field[] = ['choice', 'name', 'phone', 'pickup', 'queue'];
 // จุดที่พาโฟกัสไปเมื่อช่องนั้นยังไม่ผ่าน
 const FIELD_TARGET: Record<Field, string> = {
-  choice: '#loy-choices .choice', name: '#loy-name', phone: '#loy-phone', pickup: '#loy-pickup', queue: '#loy-queue',
+  choice: '#loy-garland .choice', name: '#loy-name', phone: '#loy-phone', pickup: '#loy-pickup', queue: '#loy-queue',
 };
 const GARLAND_KEY = 'ff-garland'; // พวงมาลัยในออเดอร์ (เก็บในเครื่อง รีเฟรชแล้วไม่หาย เหมือนตะกร้าช่อ)
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -108,7 +108,7 @@ export function OrderForm() {
     const c: Customer = { name: v('name'), phone: normalizePhone(v('phone')), ig: v('ig') };
 
     const errs: Errors = {};
-    if (!hasOrder) errs.choice = 'ยังไม่ได้เลือกสินค้า เลือกช่อหรือพวงมาลัยในขั้นตอนที่ 1 ก่อน';
+    if (!hasOrder) errs.choice = 'ยังไม่ได้เลือกสินค้า เลือกพวงมาลัยหรือช่อในขั้นตอนที่ 1 ก่อน';
     if (!c.name) errs.name = 'กรอกชื่อผู้สั่ง';
     if (!PHONE.test(c.phone)) errs.phone = 'เบอร์โทรไม่ถูกต้อง ใช้รูปแบบ 0812345678';
     if (wantPickup && !PICKUP_SLOTS.includes(pickup)) errs.pickup = `เลือกเวลามารับ ระหว่าง ${PICKUP.from}–${PICKUP.to} น.`;
@@ -204,12 +204,13 @@ export function OrderForm() {
             <ShopMap enterIndex={2} />
 
             <Step n={1} title="เลือกสินค้า" done={hasOrder} enterIndex={3}
-              status={hasOrder ? `${label} · ${baht(total)}` : 'ช่อดอกไม้ และ/หรือ พวงมาลัยรัดเกล้า'}>
-              <BouquetChoices confirm={confirm} />
+              status={hasOrder ? `${label} · ${baht(total)}` : 'พวงมาลัยรัดเกล้า และ/หรือ ช่อดอกไม้'}>
               <div className="choices">
-                <p className="choices__label">{GARLAND.name}</p>
+                <p className="choices__label choices__label--section">{GARLAND.name}</p>
                 <GarlandChoice value={garland} onChange={setGarland} />
               </div>
+              <p className="choices__label choices__label--section">ช่อดอกไม้</p>
+              <BouquetChoices confirm={confirm} />
               {errors.choice && <FieldError>{errors.choice}</FieldError>}
             </Step>
 

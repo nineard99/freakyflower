@@ -58,7 +58,7 @@ export const SHOP_LOCATION = {
 export const LOYKRATHONG = {
   eyebrow: 'Pre-order', // บรรทัดเล็กเหนือหัวเรื่อง (อักษรละติน — แสดงเป็นตัวพิมพ์ใหญ่)
   title: 'วันลอยกระทง',
-  detail: 'เลือกช่อดอกไม้หรือพวงมาลัยรัดเกล้า กรอกข้อมูล เลือกเวลารับ แล้วกดยืนยันเพื่อโอนตาม QR และแนบสลิป', // วัน เวลา สถานที่รับ แสดงจาก PICKUP
+  detail: 'เลือกพวงมาลัยรัดเกล้าหรือช่อดอกไม้ กรอกข้อมูล เลือกเวลารับ แล้วกดยืนยันเพื่อโอนตาม QR และแนบสลิป', // วัน เวลา สถานที่รับ แสดงจาก PICKUP
   qrImage: '/loykrathong-qr.png', // วางรูป QR ชำระเงินที่ public/loykrathong-qr.png
   accountName: '', // TODO: ชื่อบัญชีที่แสดงใต้ QR (ไม่ใส่ก็ได้)
   // URL ระบบรับออเดอร์ (Apps Script) อยู่ใน env: APPS_SCRIPT_URL — ดู .env.example

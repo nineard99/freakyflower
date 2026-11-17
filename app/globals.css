@@ -192,7 +192,8 @@ img, svg { max-width: 100%; }
 .tsel__opt[aria-disabled="true"] { border-style: dashed; color: var(--ink-disabled); text-decoration: line-through; cursor: not-allowed; }
 .tsel__opt[aria-disabled="true"][data-active] { background: none; }
 /* ในแถบสรุป (เลื่อนในตัวได้) แผงเวลาแทรกในเนื้อหาแทนการลอย — ไม่ถูกขอบแถบตัด */
-.rail .tsel__panel { position: static; min-width: 0; max-height: none; margin-top: var(--space-2); }
+.rail .tsel__panel { position: static; min-width: 0; max-height: none; margin-top: var(--space-2); overflow: visible; overscroll-behavior: auto; }
+/* overflow/overscroll ปกติของแผง (contain) จะกันล้อเมาส์ไม่ให้เลื่อนแถบสรุปต่อ — ในแถบสรุปแผงไม่ต้องเลื่อนเอง ปล่อยให้แถบเลื่อนแทน */
 @media (pointer: coarse) { .tsel__opt { height: var(--control-s); } }
 /* iOS ซูมหน้าเมื่อโฟกัสช่องที่ตัวอักษรเล็กกว่า 16px */
 @media (pointer: coarse) { .input, .tsel__btn, .textarea { font-size: 16px; } }
@@ -371,6 +372,7 @@ img, svg { max-width: 100%; }
 .choices { display: grid; gap: var(--space-3); }
 .choices__label { font: 500 13px/20px var(--font-body); color: var(--ink-muted); }
 .choices__label:not(:first-child) { margin-top: var(--space-2); }
+.choices__label--section { margin-bottom: calc(var(--space-2) * -1); font: 500 15px/24px var(--font-body); color: var(--ink); }
 .choices__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .choice-cell { display: grid; grid-template-rows: 1fr auto; align-content: start; gap: var(--space-1); min-width: 0; }
 .choice-cell > .check { margin-top: var(--space-1); font-size: 13px; line-height: 20px; }

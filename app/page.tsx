@@ -9,10 +9,15 @@ export default function Home() {
       <OrderForm />
       <footer className="site-foot">
         <div className="wrap site-foot__inner">
-          <p>สอบถาม LINE <span className="num">{CONFIG.lineId}</span> · โทร <span className="num">{CONFIG.phone}</span></p>
-          <a href={`https://www.instagram.com/${CONFIG.instagram}/`} target="_blank" rel="noopener noreferrer" className="link site-foot__ig">
-            <Icon name="instagram" size={16} />@{CONFIG.instagram}
-          </a>
+          <p>สอบถามได้ทาง IG หรือ TikTok ของร้าน</p>
+          <div className="site-foot__links">
+            <a href={`https://www.instagram.com/${CONFIG.instagram}/`} target="_blank" rel="noopener noreferrer" className="link site-foot__ig">
+              <Icon name="instagram" size={16} />IG @{CONFIG.instagram}
+            </a>
+            <a href={`https://www.tiktok.com/@${CONFIG.tiktok}`} target="_blank" rel="noopener noreferrer" className="link site-foot__ig">
+              <Icon name="tiktok" size={16} />TikTok @{CONFIG.tiktok}
+            </a>
+          </div>
         </div>
       </footer>
     </BouquetProvider>

@@ -18,7 +18,7 @@ export async function submitOrder({ slip, ...rest }: Input): Promise<string> {
     const res = await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     data = await res.json();
   } catch {
-    throw new OrderError('ส่งไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วลองใหม่ หรือส่งรูปสลิปให้ร้านทาง LINE');
+    throw new OrderError('ส่งไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วลองใหม่ หรือส่งรูปสลิปให้ร้านทาง IG');
   }
   if (!data.ok) throw new OrderError(data.error, data.code);
   return data.orderNo;

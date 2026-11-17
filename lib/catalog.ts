@@ -9,9 +9,9 @@ export const CONFIG = {
   maxItems: 45, // จำนวนชิ้นสูงสุดต่อช่อ
   maxLines: 8, // จำนวนรายการ (แบบช่อ) สูงสุดต่อออเดอร์
   maxQty: 10, // จำนวนช่อสูงสุดต่อรายการ
-  lineId: '@onlyflower', // TODO: ใส่ LINE OA จริง
-  phone: '08x-xxx-xxxx', // TODO: ใส่เบอร์จริง
+  // ช่องทางติดต่อร้าน (แสดงท้ายหน้า) — ชื่อบัญชีไม่ต้องมี @
   instagram: 'freakyflowers.bkk',
+  tiktok: 'freakyflowers.bkk',
 };
 
 /* ---------- Pre-order วันลอยกระทง (หน้าแรก) ---------- */

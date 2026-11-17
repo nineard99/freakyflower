@@ -136,7 +136,7 @@ export function OrderForm() {
       setGarland(null);
       window.scrollTo({ top: 0 });
     } catch (err) {
-      setFailure(err instanceof Error && err.message ? err.message : 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง LINE');
+      setFailure(err instanceof Error && err.message ? err.message : 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง IG');
       if (err instanceof OrderError && err.code === 'queue') {
         setQueueTaken(true);
         setQueue('');

@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const secret = process.env.ORDER_SECRET;
   if (!url || !secret) {
     console.error('[order] APPS_SCRIPT_URL / ORDER_SECRET ยังไม่ได้ตั้งค่า');
-    return reply({ ok: false, error: 'ร้านยังไม่ได้ตั้งค่าระบบรับออเดอร์ ติดต่อร้านทาง LINE ได้เลย' }, 503);
+    return reply({ ok: false, error: 'ร้านยังไม่ได้ตั้งค่าระบบรับออเดอร์ ติดต่อร้านทาง IG ได้เลย' }, 503);
   }
 
   const text = await request.text();
@@ -44,11 +44,11 @@ export async function POST(request: Request) {
     }
     if (!data.ok || !data.orderNo) {
       console.error('[order] Apps Script ปฏิเสธ:', data.error);
-      return reply({ ok: false, error: 'บันทึกออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง LINE' }, 502);
+      return reply({ ok: false, error: 'บันทึกออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง IG' }, 502);
     }
     return reply({ ok: true, orderNo: data.orderNo });
   } catch (err) {
     console.error('[order] ส่งไป Apps Script ไม่สำเร็จ:', err);
-    return reply({ ok: false, error: 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง LINE' }, 502);
+    return reply({ ok: false, error: 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง หรือส่งรูปสลิปให้ร้านทาง IG' }, 502);
   }
 }

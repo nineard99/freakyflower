@@ -59,7 +59,7 @@ export const LOYKRATHONG = {
   eyebrow: 'Pre-order', // บรรทัดเล็กเหนือหัวเรื่อง (อักษรละติน — แสดงเป็นตัวพิมพ์ใหญ่)
   title: 'วันลอยกระทง',
   detail: 'เลือกพวงมาลัยรัดเกล้าหรือช่อดอกไม้ กรอกข้อมูล เลือกเวลารับ แล้วกดยืนยันเพื่อโอนตาม QR และแนบสลิป', // วัน เวลา สถานที่รับ แสดงจาก PICKUP
-  qrImage: '/loykrathong-qr.png', // วางรูป QR ชำระเงินที่ public/loykrathong-qr.png
+  qrImage: '/loykrathong-qr.jpg', // รูป QR ชำระเงิน (PromptPay) ที่ public/loykrathong-qr.jpg
   accountName: '', // TODO: ชื่อบัญชีที่แสดงใต้ QR (ไม่ใส่ก็ได้)
   // URL ระบบรับออเดอร์ (Apps Script) อยู่ใน env: APPS_SCRIPT_URL — ดู .env.example
 };

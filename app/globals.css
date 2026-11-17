@@ -448,11 +448,11 @@ img, svg { max-width: 100%; }
 .pay__amount { display: grid; }
 .stat__value[data-empty] { color: var(--ink-disabled); }
 .pay__qr { display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-3); border: var(--border-hairline) solid var(--line); border-radius: var(--radius-box); background: var(--paper-raised); text-align: center; }
-.pay__qr img { display: block; width: min(240px, 100%); aspect-ratio: 1; object-fit: contain; background: #fff; border-radius: var(--radius-box); }
+.pay__qr img { display: block; width: min(280px, 100%); height: auto; border-radius: var(--radius-box); }
 .pay__qr-missing { display: grid; place-items: center; width: min(240px, 100%); aspect-ratio: 1; border: var(--border-hairline) dashed var(--edge); border-radius: var(--radius-box); color: var(--ink-muted); font-size: 13px; }
 .pay__qr figcaption { font-size: 12px; line-height: 18px; color: var(--ink-muted); }
 @media (min-width: 640px) {
-  .pay { grid-template-columns: 208px minmax(0, 1fr); grid-template-areas: 'qr amount' 'qr slip'; grid-template-rows: auto 1fr; gap: var(--space-5) var(--space-6); }
+  .pay { grid-template-columns: 240px minmax(0, 1fr); grid-template-areas: 'qr amount' 'qr slip'; grid-template-rows: auto 1fr; gap: var(--space-5) var(--space-6); }
   .pay__amount { grid-area: amount; }
   .pay__qr { grid-area: qr; }
   .pay__slip { grid-area: slip; }

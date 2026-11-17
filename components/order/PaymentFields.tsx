@@ -62,6 +62,12 @@ export function PaymentFields({ hasOrder, shown, slip, error, onSlip, onBadFile 
           <img ref={qrRef} src={LOYKRATHONG.qrImage} alt="QR code สำหรับชำระเงิน" onError={() => setQrMissing(true)} />
         )}
         <figcaption>{LOYKRATHONG.accountName || 'สแกนด้วยแอปธนาคาร'}</figcaption>
+        {/* โอนจากมือถือเครื่องเดียวกัน: บันทึกรูปแล้วเปิดในแอปธนาคาร */}
+        {!qrMissing && (
+          <a className="btn btn--xs" href={LOYKRATHONG.qrImage} download="freakyflower-qr.jpg">
+            <Icon name="download" size={14} />บันทึกรูป QR
+          </a>
+        )}
       </figure>
       <div className="field pay__slip">
         <span className="field__label">สลิปการโอน</span>

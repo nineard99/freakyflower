@@ -119,7 +119,7 @@ export function OrderRail({
               />
               {errors.queue
                 ? <FieldError id="err-queue">{errors.queue}</FieldError>
-                : <span id="hint-queue" className="field__hint num">{PICKUP.date} · คิวละ {GARLAND.queue.step} นาที {GARLAND.queue.from}–{GARLAND.queue.to} น. · 1 คิวต่อ 1 ออเดอร์ มาตรงเวลาเพื่อให้ร้านมัดให้</span>}
+                : <span id="hint-queue" className="field__hint num">{PICKUP.date} · คิวละ {GARLAND.queue.step} นาที {GARLAND.queue.from}–{GARLAND.queue.to} น. · 1 คิวต่อ 1 ออเดอร์ <span className="field__hint-warn">กรุณามาตรงเวลาเพื่อให้ร้านมัดให้</span></span>}
             </div>
           ) : hasFlowers ? (
             <p className="field__hint">รับพร้อมช่อดอกไม้ ตามเวลารับช่อด้านบน</p>

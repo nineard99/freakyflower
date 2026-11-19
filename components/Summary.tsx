@@ -18,7 +18,7 @@ export const Summary = memo(function Summary({ design }: { design: Design }) {
             ))}
             <li className="sum__wrap">
               <span>ห่อ{wrapLabel(design)}</span>
-              <span className="num">{baht(sum.wrap)}</span>
+              <span className="num">{sum.wrap ? baht(sum.wrap) : 'ฟรี'}</span>
             </li>
           </>
         ) : (

@@ -59,7 +59,7 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
         {templates.map(({ t, looks }) => {
           const line = lines.find((l) => l.kind === 'template' && l.templateId === t.id);
           const blocked = !line && linesFull;
-          const d = looks[`${line?.style ?? 'fan'}|${!!line?.film}`];
+          const d = looks[`${line ? line.style : t.style ?? 'fan'}|${line ? line.film : !!t.film}`];
           return (
             <div key={t.id} className="choice-cell">
               <button type="button" aria-pressed={!!line} className="choice" disabled={blocked} onClick={() => toggleTemplate(t.id)}>

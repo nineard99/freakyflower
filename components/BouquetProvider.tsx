@@ -5,7 +5,7 @@ import {
   EMPTY_DESIGN, EMPTY_SHOP, newLineId, sanitizeDesign, sanitizeLines, sanitizeShop, shopToDesign,
   type CartLine, type ShopPick,
 } from '@/lib/cart';
-import { CONFIG, FLOWERS, toWrapStyle, type Design, type Item, type WrapStyle } from '@/lib/catalog';
+import { CONFIG, FLOWERS, TEMPLATES, toWrapStyle, type Design, type Item, type WrapStyle } from '@/lib/catalog';
 
 export type { ShopPick } from '@/lib/cart';
 
@@ -180,7 +180,8 @@ export function BouquetProvider({ children }: { children: React.ReactNode }) {
     setLines((ls) => {
       if (ls.some((l) => l.kind === 'template' && l.templateId === templateId)) return ls.filter((l) => !(l.kind === 'template' && l.templateId === templateId));
       if (ls.length >= CONFIG.maxLines) return ls;
-      return [...ls, { id: newLineId(), qty: 1, film: false, style: 'fan', kind: 'template', templateId }];
+      const t = TEMPLATES.find((x) => x.id === templateId);
+      return [...ls, { id: newLineId(), qty: 1, film: !!t?.film, style: t?.style ?? 'fan', kind: 'template', templateId }];
     });
   }, []);
   const clearCart = useCallback(() => setLines([]), []);

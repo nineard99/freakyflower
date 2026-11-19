@@ -114,7 +114,7 @@ export const sizeOf = (type: string) => FLOWERS[type]?.size ?? 0.9;
 export const flowerImg = (type: string, color: string) => `/flowers/${type}-${color}.webp`;
 
 /* ---------- กระดาษห่อ / ริบบิ้น ---------- */
-export const WRAP_PRICE = 50; // ค่าห่อ + ริบบิ้น (ราคาตัวอย่าง)
+export const WRAP_PRICE = 0; // ค่าห่อกระดาษ + ริบบิ้น (0 = ฟรี)
 export const FILM_PRICE: number = 5; // ค่าฟิล์มใสห่อทับกระดาษ (0 = ไม่คิดเพิ่ม)
 
 // ทรงการห่อ 2 แบบให้ลูกค้าเลือกทีละช่อ (แยกจากฟิล์มใส) — ราคาเท่ากัน · ตัวแรก = ค่าเริ่มต้น
@@ -148,12 +148,13 @@ export const wrapLabel = (d: Design) =>
    ใส่ดอกแซมก่อน (อยู่ด้านหลัง) แล้วค่อยดอกหลัก */
 type Tuple = [string, string, number, number, number];
 // photo = รูปช่อที่ร้านทำจริง ใช้บนการ์ดหน้าหลัก (ไม่มี = ใช้ภาพวาดจาก items)
-export type Template = { id: string; name: string; desc: string; paper: number; ribbon: number; items: Tuple[]; photo?: string };
+// film/style = การห่อเริ่มต้นตอนลูกค้ากดเลือก (ตามรูปจริง) — ลูกค้าเปลี่ยนเองได้
+export type Template = { id: string; name: string; desc: string; paper: number; ribbon: number; items: Tuple[]; photo?: string; film?: boolean; style?: WrapStyle };
 
 export const TEMPLATES: Template[] = [
   {
     id: 'one-rose', name: 'กุหลาบดอกเดียว', desc: 'กุหลาบแดง 1 ดอก แซมยิปโซ ห่อหนังสือพิมพ์',
-    paper: 0, ribbon: 0, photo: '/templates/one-rose.jpg',
+    paper: 0, ribbon: 0, photo: '/templates/one-rose.jpg', film: true, style: 'cone',
     items: [
       ['gypsophila', 'white', 176, 196, -14], ['gypsophila', 'white', 230, 210, 16],
       ['rose', 'red', 200, 252, 0],
@@ -165,15 +166,6 @@ export const TEMPLATES: Template[] = [
     items: [
       ['gypsophila', 'white', 156, 170, -16], ['gypsophila', 'white', 246, 164, 14], ['gypsophila', 'white', 204, 136, 0],
       ['rose', 'red', 202, 204, 0], ['rose', 'red', 160, 250, -10], ['rose', 'red', 242, 258, 8],
-    ],
-  },
-  {
-    id: 'mix', name: 'มิกซ์สดใส', desc: 'ทานตะวัน กุหลาบ เยอบีร่า แซมยิปโซ ห่อหนังสือพิมพ์',
-    paper: 0, ribbon: 0,
-    items: [
-      ['gypsophila', 'white', 108, 210, -28], ['gypsophila', 'white', 270, 148, 16], ['gypsophila', 'white', 222, 116, 4],
-      ['carnation', 'white', 180, 122, 0],
-      ['sunflower', 'yellow', 156, 176, -8], ['rose', 'red', 266, 222, 6], ['gerbera', 'lightpink', 200, 262, 0],
     ],
   },
   {

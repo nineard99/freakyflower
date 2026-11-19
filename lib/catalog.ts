@@ -147,12 +147,13 @@ export const wrapLabel = (d: Design) =>
    items: [ชนิด, สี, x, y, องศา] — พื้นที่วาง 400×520, ก้านรวบที่จุด (200, 372)
    ใส่ดอกแซมก่อน (อยู่ด้านหลัง) แล้วค่อยดอกหลัก */
 type Tuple = [string, string, number, number, number];
-export type Template = { id: string; name: string; desc: string; paper: number; ribbon: number; items: Tuple[] };
+// photo = รูปช่อที่ร้านทำจริง ใช้บนการ์ดหน้าหลัก (ไม่มี = ใช้ภาพวาดจาก items)
+export type Template = { id: string; name: string; desc: string; paper: number; ribbon: number; items: Tuple[]; photo?: string };
 
 export const TEMPLATES: Template[] = [
   {
     id: 'one-rose', name: 'กุหลาบดอกเดียว', desc: 'กุหลาบแดง 1 ดอก แซมยิปโซ ห่อหนังสือพิมพ์',
-    paper: 0, ribbon: 0,
+    paper: 0, ribbon: 0, photo: '/templates/one-rose.jpg',
     items: [
       ['gypsophila', 'white', 176, 196, -14], ['gypsophila', 'white', 230, 210, 16],
       ['rose', 'red', 200, 252, 0],
@@ -160,7 +161,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'three-roses', name: 'กุหลาบ 3 ดอก', desc: 'กุหลาบแดง 3 ดอก แซมยิปโซ ห่อหนังสือพิมพ์',
-    paper: 0, ribbon: 0,
+    paper: 0, ribbon: 0, photo: '/templates/three-roses.jpg',
     items: [
       ['gypsophila', 'white', 156, 170, -16], ['gypsophila', 'white', 246, 164, 14], ['gypsophila', 'white', 204, 136, 0],
       ['rose', 'red', 202, 204, 0], ['rose', 'red', 160, 250, -10], ['rose', 'red', 242, 258, 8],
@@ -177,7 +178,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'orange-gerbera', name: 'เยอบีร่าส้ม', desc: 'เยอบีร่าส้ม 2 ดอก แซมแคสเปียม่วง ยิปโซ และคลัสเตอร์ ห่อหนังสือพิมพ์',
-    paper: 0, ribbon: 0,
+    paper: 0, ribbon: 0, photo: '/templates/orange-gerbera.jpg',
     items: [
       ['caspia', 'purple', 222, 140, 0], ['gypsophila', 'white', 256, 150, 12],
       ['aster', 'white', 148, 238, 0],

@@ -63,7 +63,12 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
           return (
             <div key={t.id} className="choice-cell">
               <button type="button" aria-pressed={!!line} className="choice" disabled={blocked} onClick={() => toggleTemplate(t.id)}>
-                <span className="choice__media"><BouquetSvg design={d} label={t.name} /></span>
+                <span className="choice__media">
+                  {t.photo
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img className="choice__photo" src={t.photo} alt={t.name} loading="lazy" />
+                    : <BouquetSvg design={d} label={t.name} />}
+                </span>
                 <span className="choice__check" aria-hidden>
                   {line && line.qty > 1 ? <b className="num">{line.qty}</b> : <Icon name="check" size={14} strokeWidth={2.6} />}
                 </span>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { baht, CONFIG, flowerImg, FLOWERS, PAPERS, RIBBONS, ROLES, summarize } from '@/lib/catalog';
 import { BouquetSvg } from './BouquetSvg';
+import { FilmToggle } from './FilmToggle';
 import { WrapChoice } from './WrapChoice';
 import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
@@ -13,7 +14,7 @@ import { Swatches } from './ui';
 
 // โหมด "ให้ร้านจัดให้": ลูกค้าเลือกชนิด สี จำนวน — ร้านเป็นคนจัดวางเอง
 export function ShopPicker({ onClose }: { onClose: () => void }) {
-  const { shop, shopDesign, setShop, draftFilm, setDraftFilm, editing, linesFull, commitDraft } = useBouquet();
+  const { shop, shopDesign, setShop, draftFilm, setDraftFilm, draftStyle, setDraftStyle, editing, linesFull, commitDraft } = useBouquet();
   const [active, setActive] = useState<Record<string, string>>({});
   const total = Object.values(shop.counts).reduce((a, n) => a + n, 0);
   const sum = summarize(shopDesign);
@@ -119,7 +120,8 @@ export function ShopPicker({ onClose }: { onClose: () => void }) {
                   />
                 </div>
               )}
-              <WrapChoice film={draftFilm} onChange={setDraftFilm} />
+              <WrapChoice value={draftStyle} onChange={setDraftStyle} />
+              <FilmToggle checked={draftFilm} onChange={setDraftFilm} />
             </div>
           </section>
 

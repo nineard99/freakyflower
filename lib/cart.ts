@@ -1,14 +1,14 @@
 import { arrange as autoArrange, type Counts } from './arrange';
-import { CONFIG, FLOWERS, PAPERS, RIBBONS, summarize, templateDesign, TEMPLATES, wrapLabel, type Design } from './catalog';
+import { CONFIG, FLOWERS, PAPERS, RIBBONS, summarize, templateDesign, TEMPLATES, toWrapStyle, wrapLabel, type Design, type WrapStyle } from './catalog';
 
 /* ตะกร้า: ออเดอร์เดียวสั่งได้หลายช่อ — แต่ละรายการ = แบบสำเร็จ / จัดวางเอง / ให้ร้านจัดให้ + จำนวน
-   ฟิล์มใสเลือกแยกได้ทีละรายการ (line.film) */
+   ฟิล์มใสและทรงการห่อเลือกแยกได้ทีละรายการ (line.film / line.style) */
 
 // โหมดให้ร้านจัดให้: ลูกค้าเลือกแค่ชนิด/สี/จำนวน + กระดาษ ริบบิ้น และโน้ตถึงร้าน
-// film อยู่ในร่างเท่านั้น — พอเพิ่มลงออเดอร์แล้วย้ายไปเก็บที่ line.film
-export type ShopPick = { counts: Counts; paper: number; ribbon: number; note: string; film?: boolean };
+// film/style อยู่ในร่างเท่านั้น — พอเพิ่มลงออเดอร์แล้วย้ายไปเก็บที่ line.film / line.style
+export type ShopPick = { counts: Counts; paper: number; ribbon: number; note: string; film?: boolean; style?: WrapStyle };
 
-type LineBase = { id: string; qty: number; film: boolean }; // film = ห่อฟิล์มใสทับกระดาษ
+type LineBase = { id: string; qty: number; film: boolean; style: WrapStyle }; // film = ห่อฟิล์มใสทับกระดาษ · style = ทรงการห่อ
 export type CartLine =
   | (LineBase & { kind: 'template'; templateId: string })
   | (LineBase & { kind: 'custom'; design: Design })
@@ -49,7 +49,7 @@ export function sanitizeLines(raw: unknown, legacyFilm = false): CartLine[] {
   const out: CartLine[] = [];
   for (const l of raw as Partial<CartLine & { templateId: string; design: Design; pick: ShopPick }>[]) {
     if (!l || typeof l !== 'object') continue;
-    const base = { id: typeof l.id === 'string' && l.id ? l.id : newLineId(), qty: clampQty(l.qty), film: typeof l.film === 'boolean' ? l.film : legacyFilm };
+    const base = { id: typeof l.id === 'string' && l.id ? l.id : newLineId(), qty: clampQty(l.qty), film: typeof l.film === 'boolean' ? l.film : legacyFilm, style: toWrapStyle(l.style) };
     if (l.kind === 'template' && TEMPLATES.some((t) => t.id === l.templateId)) {
       if (!out.some((x) => x.kind === 'template' && x.templateId === l.templateId)) out.push({ ...base, kind: 'template', templateId: l.templateId! });
     } else if (l.kind === 'custom') {
@@ -69,7 +69,7 @@ export function lineDesign(l: CartLine): Design {
   const d = l.kind === 'template'
     ? templateDesign(TEMPLATES.find((t) => t.id === l.templateId)!)
     : l.kind === 'custom' ? l.design : shopToDesign(l.pick);
-  return { ...d, film: l.film };
+  return { ...d, film: l.film, style: l.style };
 }
 
 // ชื่อรายการ: แบบสำเร็จใช้ชื่อแบบ · จัดเอง/ร้านจัด มีเลขลำดับเมื่อมีมากกว่าหนึ่ง

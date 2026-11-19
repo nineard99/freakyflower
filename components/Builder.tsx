@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { baht, CONFIG, flowerImg, FLOWERS, PAPERS, RIBBONS, ROLES, summarize, templateDesign, TEMPLATES, type Item, type Role, type Template } from '@/lib/catalog';
 import { Bouquet3D, type Bouquet3DHandle } from './Bouquet3D';
 import { BouquetSvg } from './BouquetSvg';
+import { FilmToggle } from './FilmToggle';
 import { WrapChoice } from './WrapChoice';
 import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
@@ -126,7 +127,7 @@ export function Builder({ onClose }: { onClose: () => void }) {
             <div className="lib__presets" key="preset">
               {TEMPLATES.map((t) => (
                 <button key={t.id} type="button" className="preset" onClick={() => loadPreset(t)}>
-                  <BouquetSvg design={{ ...templateDesign(t), film: design.film }} label="" aria-hidden />
+                  <BouquetSvg design={{ ...templateDesign(t), film: design.film, style: design.style }} label="" aria-hidden />
                   <span>{t.name}</span>
                 </button>
               ))}
@@ -269,7 +270,8 @@ export function Builder({ onClose }: { onClose: () => void }) {
                 items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
               />
             )}
-            <WrapChoice film={b.draftFilm} onChange={b.setDraftFilm} />
+            <WrapChoice value={b.draftStyle} onChange={b.setDraftStyle} />
+            <FilmToggle checked={b.draftFilm} onChange={b.setDraftFilm} />
           </section>
 
           <section className="insp">

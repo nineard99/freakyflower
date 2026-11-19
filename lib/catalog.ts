@@ -117,11 +117,14 @@ export const flowerImg = (type: string, color: string) => `/flowers/${type}-${co
 export const WRAP_PRICE = 50; // ค่าห่อ + ริบบิ้น (ราคาตัวอย่าง)
 export const FILM_PRICE: number = 5; // ค่าฟิล์มใสห่อทับกระดาษ (0 = ไม่คิดเพิ่ม)
 
-// การห่อ 2 แบบให้ลูกค้าเลือก (เก็บในออเดอร์เป็นค่า film: true/false)
-export const WRAP_STYLES = [
-  { film: false, name: 'กระดาษ', desc: 'กระดาษหนังสือพิมพ์ทรงบาน', image: '/wrap-paper.jpg' },
-  { film: true, name: 'ฟิล์มใส', desc: 'กระดาษทรงกรวย หุ้มฟิล์มใส', image: '/wrap-film.jpg' },
-] as const;
+// ทรงการห่อ 2 แบบให้ลูกค้าเลือกทีละช่อ (แยกจากฟิล์มใส) — ราคาเท่ากัน · ตัวแรก = ค่าเริ่มต้น
+export type WrapStyle = 'fan' | 'cone';
+export const WRAP_STYLES: { id: WrapStyle; name: string; desc: string; image: string }[] = [
+  { id: 'fan', name: 'ทรงบาน', desc: 'กระดาษบานรอบช่อ', image: '/wrap-fan.jpg' },
+  { id: 'cone', name: 'ทรงกรวย', desc: 'กระดาษม้วนเป็นกรวยแคบ', image: '/wrap-cone.jpg' },
+];
+export const toWrapStyle = (v: unknown): WrapStyle => (v === 'cone' ? 'cone' : 'fan');
+export const wrapStyleName = (s?: WrapStyle) => (WRAP_STYLES.find((w) => w.id === s) ?? WRAP_STYLES[0]).name;
 
 // ร้านมีกระดาษหนังสือพิมพ์กับริบบิ้นขาวอย่างละแบบเดียว — มีตัวเลือกเดียว หน้าเว็บจะไม่แสดงตัวเลือก (แสดงเป็นข้อความแทน)
 // อยากเพิ่มสี: เพิ่มรายการต่อท้าย (ตัวที่ 0 = ค่าเริ่มต้น) แล้วตัวเลือกจะกลับมาเอง
@@ -135,10 +138,10 @@ export const RIBBONS: [string, string][] = [
 
 /* ---------- แบบช่อ ---------- */
 export type Item = { id: number; type: string; color: string; x: number; y: number; r: number }; // ขนาดล็อกตามชนิด (sizeOf)
-export type Design = { paper: number; ribbon: number; items: Item[]; film?: boolean }; // film = ห่อฟิล์มใสทับกระดาษ
+export type Design = { paper: number; ribbon: number; items: Item[]; film?: boolean; style?: WrapStyle }; // film = ห่อฟิล์มใสทับกระดาษ · style = ทรงการห่อ (ไม่ใส่ = ทรงบาน)
 // ชื่อการห่อที่ใช้ในสรุปรายการและข้อความออเดอร์
 export const wrapLabel = (d: Design) =>
-  `กระดาษ${(PAPERS[d.paper] ?? PAPERS[0]).name}${d.film ? ' + ฟิล์มใส' : ''} · ริบบิ้น${(RIBBONS[d.ribbon] ?? RIBBONS[0])[0]}`;
+  `${wrapStyleName(d.style)} · กระดาษ${(PAPERS[d.paper] ?? PAPERS[0]).name}${d.film ? ' + ฟิล์มใส' : ''} · ริบบิ้น${(RIBBONS[d.ribbon] ?? RIBBONS[0])[0]}`;
 
 /* แบบสำเร็จ — ตามช่อที่ร้านจัดขายจริง (ใช้เป็น preset เริ่มต้นในหน้าจัดวางเองด้วย)
    items: [ชนิด, สี, x, y, องศา] — พื้นที่วาง 400×520, ก้านรวบที่จุด (200, 372)

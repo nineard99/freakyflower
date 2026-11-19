@@ -81,14 +81,15 @@ type Rim = { r: (th: number) => number; h: (th: number) => number };
 
 // th = มุมรอบแกนตั้ง, 0 = ด้านหน้า (+Z)
 // กรวยตรงจากจุดรวบ ลาดเท่าที่พอโอบดอกนอกสุด แล้วตัดขอบเฉียง: หน้าเตี้ย (เห็นดอก) หลังสูง (พนักกระดาษ)
-function rimOf(items: Item[]): Rim {
+// cone = ทรงกรวย: ลาดน้อยกว่า กระดาษแนบช่อ
+function rimOf(items: Item[], cone = false): Rim {
   const heads = items.map((it) => {
     const p = to3d(it.x, it.y);
     return { p, r: HEAD * sizeOf(it.type), d: Math.hypot(p.x, p.z) };
   });
   const hFront = heads.length ? clamp(Math.min(...heads.map((h) => h.p.y - h.r * 0.5)) - 4, 62, 160) : 120;
   const hBack = heads.length ? Math.max(hFront + 50, Math.max(...heads.map((h) => h.p.y + h.r * 0.6)) + 14) : 200;
-  const slope = clamp(Math.max(0, ...heads.map((h) => (h.d + h.r * 0.5 - NECK) / h.p.y)), 0.42, 1.05); // ดอกที่วางไกลมากจะโผล่พ้นกระดาษ แทนที่กระดาษจะบานตาม
+  const slope = cone ? 0.3 : clamp(Math.max(0, ...heads.map((h) => (h.d + h.r * 0.5 - NECK) / h.p.y)), 0.42, 1.05); // ดอกที่วางไกลมากจะโผล่พ้นกระดาษ แทนที่กระดาษจะบานตาม
   const back = (th: number) => (1 - Math.cos(th)) / 2; // 0 = หน้า, 1 = หลัง
   const h = (th: number) => hFront + (hBack - hFront) * smooth(0.3, 0.85, back(th)) + 5 * Math.sin(6 * th + 0.7) + 3 * Math.sin(11 * th);
   const wave = (th: number) => (1 + 0.1 * back(th)) * (1 + 0.035 * Math.sin(5 * th + 1.3));
@@ -173,7 +174,7 @@ export function createScene3D(canvas: HTMLCanvasElement, handlers: Handlers): Sc
 
     const paper = PAPERS[d.paper] ?? PAPERS[0];
     const rb = (RIBBONS[d.ribbon] ?? RIBBONS[0])[1];
-    const rim = rimOf(d.items);
+    const rim = rimOf(d.items, d.style === 'cone');
 
     // กระดาษ: กรวยบน + หางใต้ริบบิ้น
     const isNews = paper.kind === 'news';

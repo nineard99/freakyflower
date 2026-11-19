@@ -2,11 +2,12 @@
 
 import { memo, useMemo } from 'react';
 import { resolveLines } from '@/lib/cart';
-import { baht, CONFIG, summarize, templateDesign, TEMPLATES, wrapLabel, type Template } from '@/lib/catalog';
+import { baht, CONFIG, summarize, templateDesign, TEMPLATES, wrapLabel, WRAP_STYLES, type Design, type Template } from '@/lib/catalog';
 import { BouquetSvg } from './BouquetSvg';
 import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
 import type { ConfirmReq } from './ui';
+import { FilmToggle } from './FilmToggle';
 import { WrapChoice, WrapGuide } from './WrapChoice';
 
 // จำนวนช่อของรายการ — ลดจนเหลือ 0 = เอาออกจากออเดอร์
@@ -27,11 +28,12 @@ function Qty({ name, qty, onChange }: { name: string; qty: number; onChange: (n:
 // ตัวเลือกช่อในฟอร์ม: แบบสำเร็จ (การ์ด + จำนวน) · ออกแบบเอง 2 ทาง (สร้างช่อใหม่) · รายการช่อที่ออกแบบไว้แล้ว
 // ออเดอร์เดียวสั่งได้หลายช่อ — การ์ดที่กดแล้ว (aria-pressed) = อยู่ในออเดอร์
 export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confirm: (req: ConfirmReq) => void }) {
-  const { lines, linesFull, setQty, removeLine, setLineFilm, toggleTemplate, openDraft, pending } = useBouquet();
-  // ภาพ + ราคาแบบสำเร็จ ทั้งแบบไม่ห่อ/ห่อฟิล์ม คำนวณครั้งเดียว (object เดิม → BouquetSvg ไม่วาดใหม่)
+  const { lines, linesFull, setQty, removeLine, setLineFilm, setLineStyle, toggleTemplate, openDraft, pending } = useBouquet();
+  // ภาพแบบสำเร็จทุกทรงการห่อ × มี/ไม่มีฟิล์ม คำนวณครั้งเดียว (object เดิม → BouquetSvg ไม่วาดใหม่)
   const templates = useMemo(() => TEMPLATES.map((t) => {
-    const plain = templateDesign(t), film = { ...plain, film: true };
-    return { t, plain, film, price: summarize(plain).total, filmPrice: summarize(film).total };
+    const base = templateDesign(t), looks: Record<string, Design> = {};
+    for (const w of WRAP_STYLES) for (const film of [false, true]) looks[`${w.id}|${film}`] = { ...base, style: w.id, film };
+    return { t, looks };
   }), []);
   const designed = useMemo(() => resolveLines(lines).filter((r) => r.line.kind !== 'template'), [lines]);
   const hasCustom = pending.design.items.length > 0;
@@ -54,10 +56,10 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
 
       <p className="choices__label">แบบสำเร็จ <span className="choices__sub">เลือกได้หลายแบบ</span></p>
       <div className="choices__grid">
-        {templates.map(({ t, plain, film, price, filmPrice }) => {
+        {templates.map(({ t, looks }) => {
           const line = lines.find((l) => l.kind === 'template' && l.templateId === t.id);
           const blocked = !line && linesFull;
-          const d = line?.film ? film : plain;
+          const d = looks[`${line?.style ?? 'fan'}|${!!line?.film}`];
           return (
             <div key={t.id} className="choice-cell">
               <button type="button" aria-pressed={!!line} className="choice" disabled={blocked} onClick={() => toggleTemplate(t.id)}>
@@ -66,7 +68,7 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   {line && line.qty > 1 ? <b className="num">{line.qty}</b> : <Icon name="check" size={14} strokeWidth={2.6} />}
                 </span>
                 <span className="choice__name">{t.name}</span>
-                <span className="choice__price num">{baht(line?.film ? filmPrice : price)}</span>
+                <span className="choice__price num">{baht(summarize(d).total)}</span>
               </button>
               <div className="choice-cell__foot">
                 {line && <Qty name={t.name} qty={line.qty} onChange={(n) => setQty(line.id, n)} />}
@@ -74,7 +76,8 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   <Icon name="pencil" size={14} />ปรับแต่ง
                 </button>
               </div>
-              {line && <WrapChoice compact film={line.film} onChange={(on) => setLineFilm(line.id, on)} name={t.name} />}
+              {line && <WrapChoice compact value={line.style} onChange={(s) => setLineStyle(line.id, s)} name={t.name} />}
+              {line && <FilmToggle checked={line.film} onChange={(on) => setLineFilm(line.id, on)} name={t.name} />}
             </div>
           );
         })}
@@ -116,7 +119,8 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   <span className="cart__name">{name}</span>
                   <span className="cart__sub">{wrapLabel(design)}</span>
                   <span className="cart__sub num">{baht(unit)} / ช่อ{line.qty > 1 && <> · รวม {baht(total)}</>}</span>
-                  <WrapChoice compact film={line.film} onChange={(on) => setLineFilm(line.id, on)} name={name} />
+                  <WrapChoice compact value={line.style} onChange={(s) => setLineStyle(line.id, s)} name={name} />
+                  <FilmToggle checked={line.film} onChange={(on) => setLineFilm(line.id, on)} name={name} />
                 </span>
                 <span className="cart__actions">
                   <Qty name={name} qty={line.qty} onChange={(n) => setQty(line.id, n)} />

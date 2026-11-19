@@ -29,7 +29,8 @@ function rng(seed: number) {
 /* ---------- ขอบเขตกระดาษ ---------- */
 type Geo = { L: number; R: number; T: number; F: number; W: number; H: number };
 
-function geometry(items: Item[]): Geo {
+// cone = ทรงกรวย: กระดาษแคบแนบช่อ (ดอกที่วางกว้างจะโผล่พ้นขอบ) · ทรงบานกางตามดอกนอกสุด
+function geometry(items: Item[], cone = false): Geo {
   let l = TIE.x - 30, r = TIE.x + 30, t = 200, b = 280;
   items.forEach((it, i) => {
     const rr = HEAD * sizeOf(it.type);
@@ -37,8 +38,9 @@ function geometry(items: Item[]): Geo {
     l = Math.min(l, it.x - rr); r = Math.max(r, it.x + rr);
     t = Math.min(t, it.y - rr); b = Math.max(b, it.y + rr * 0.95);
   });
-  const L = Math.max(10, Math.min(l - 34, TIE.x - 82));
-  const R = Math.min(390, Math.max(r + 34, TIE.x + 82));
+  const half = cone ? Math.max(58, Math.min(84, (r - l) / 2 * 0.62 + 10)) : 0;
+  const L = cone ? TIE.x - half : Math.max(10, Math.min(l - 34, TIE.x - 82));
+  const R = cone ? TIE.x + half : Math.min(390, Math.max(r + 34, TIE.x + 82));
   const T = Math.max(12, Math.min(t - 20, TIE.y - 175));
   const F = Math.min(Math.max(b - 8, T + 80), TIE.y - 56); // ขอบบนกระดาษด้านหน้า (ใต้หัวดอกล่างสุด)
   return { L, R, T, F, W: R - L, H: F - T };
@@ -96,7 +98,8 @@ const curl = (path: string, color: string) =>
   `<path d="${path}" fill="none" stroke="${shade(color, 0.35)}" stroke-width="2.4" stroke-linecap="round" opacity=".75"/>`;
 
 export function backLayer(uid: string, d: Design) {
-  const { L, R, T, W, H } = geometry(d.items);
+  const cone = d.style === 'cone';
+  const { L, R, T, W, H } = geometry(d.items, cone);
   const p = PAPERS[d.paper] ?? PAPERS[0];
   const bl = TIE.x - 14, br = TIE.x + 14, by = TIE.y;
   const cTop = `M${f1(L + 0.22 * W)} ${f1(T + 0.04 * H)}Q${TIE.x} ${f1(T - 0.06 * H)} ${f1(R - 0.22 * W)} ${f1(T + 0.02 * H)}`;
@@ -109,15 +112,17 @@ export function backLayer(uid: string, d: Design) {
   }
   out += `<g filter="url(#${uid}pp)">`;
   out += sheet(uid, d, `M${bl} ${by}L${cTop.slice(1)}L${br} ${by}Z`, 0);
-  out += sheet(uid, d, `M${br} ${by}L${lTop.slice(1)}L${bl + 8} ${by}Z`, 1, true);
-  out += sheet(uid, d, `M${bl} ${by}L${rTop.slice(1)}L${br - 8} ${by}Z`, 2, true);
+  if (!cone) { // ทรงบาน: แผ่นข้างกางออกซ้าย/ขวา
+    out += sheet(uid, d, `M${br} ${by}L${lTop.slice(1)}L${bl + 8} ${by}Z`, 1, true);
+    out += sheet(uid, d, `M${bl} ${by}L${rTop.slice(1)}L${br - 8} ${by}Z`, 2, true);
+  }
   out += '</g>';
-  out += curl(cTop, p.color) + curl(lTop, p.color) + curl(rTop, p.color);
+  out += curl(cTop, p.color) + (cone ? '' : curl(lTop, p.color) + curl(rTop, p.color));
   return out;
 }
 
 export function frontLayer(uid: string, d: Design) {
-  const { L, R, F, W, H } = geometry(d.items);
+  const { L, R, F, W, H } = geometry(d.items, d.style === 'cone');
   const p = PAPERS[d.paper] ?? PAPERS[0];
   const rb = (RIBBONS[d.ribbon] ?? RIBBONS[0])[1];
   const bl = TIE.x - 16, br = TIE.x + 16, by = TIE.y;

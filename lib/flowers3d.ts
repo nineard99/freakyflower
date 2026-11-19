@@ -360,10 +360,10 @@ const MODELS: Record<string, Model> = {
   rose: { make: rose, sink: 0.45, neck: 0.15 },
   sunflower: { make: sunflower, sink: 0.05, neck: 0.16 },
   gerbera: { make: gerbera, sink: 0.05, neck: 0.12 },
-  daisy: { make: daisy, sink: 0.05, neck: 0.1 },
+  aster: { make: daisy, sink: 0.05, neck: 0.1 }, // คลัสเตอร์ = ช่อดอกเล็กทรงเดซี่
   carnation: { make: carnation, sink: 0.4, neck: 0.5 },
   gypsophila: { make: gypsophila, sink: 0.85, neck: 0.05 },
-  statice: { make: statice, sink: 0.75, neck: 0.05 },
+  caspia: { make: statice, sink: 0.75, neck: 0.05 }, // แคสเปีย ทรงพุ่มเดียวกับสแตติส
 };
 
 const cache = new Map<string, THREE.BufferGeometry>();

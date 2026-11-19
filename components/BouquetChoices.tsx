@@ -7,7 +7,7 @@ import { BouquetSvg } from './BouquetSvg';
 import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
 import type { ConfirmReq } from './ui';
-import { FilmToggle } from './FilmToggle';
+import { WrapChoice, WrapGuide } from './WrapChoice';
 
 // จำนวนช่อของรายการ — ลดจนเหลือ 0 = เอาออกจากออเดอร์
 function Qty({ name, qty, onChange }: { name: string; qty: number; onChange: (n: number) => void }) {
@@ -50,6 +50,8 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
 
   return (
     <div className="choices" role="group" aria-label="เลือกช่อดอกไม้" id="loy-choices">
+      <WrapGuide />
+
       <p className="choices__label">แบบสำเร็จ <span className="choices__sub">เลือกได้หลายแบบ</span></p>
       <div className="choices__grid">
         {templates.map(({ t, plain, film, price, filmPrice }) => {
@@ -72,7 +74,7 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   <Icon name="pencil" size={14} />ปรับแต่ง
                 </button>
               </div>
-              {line && <FilmToggle checked={line.film} onChange={(on) => setLineFilm(line.id, on)} name={t.name} />}
+              {line && <WrapChoice compact film={line.film} onChange={(on) => setLineFilm(line.id, on)} name={t.name} />}
             </div>
           );
         })}
@@ -114,7 +116,7 @@ export const BouquetChoices = memo(function BouquetChoices({ confirm }: { confir
                   <span className="cart__name">{name}</span>
                   <span className="cart__sub">{wrapLabel(design)}</span>
                   <span className="cart__sub num">{baht(unit)} / ช่อ{line.qty > 1 && <> · รวม {baht(total)}</>}</span>
-                  <FilmToggle checked={line.film} onChange={(on) => setLineFilm(line.id, on)} name={name} />
+                  <WrapChoice compact film={line.film} onChange={(on) => setLineFilm(line.id, on)} name={name} />
                 </span>
                 <span className="cart__actions">
                   <Qty name={name} qty={line.qty} onChange={(n) => setQty(line.id, n)} />

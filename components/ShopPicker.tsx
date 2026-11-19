@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { baht, CONFIG, flowerImg, FLOWERS, PAPERS, RIBBONS, ROLES, summarize } from '@/lib/catalog';
 import { BouquetSvg } from './BouquetSvg';
-import { FilmToggle } from './FilmToggle';
+import { WrapChoice } from './WrapChoice';
 import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
 import { PickerShell } from './PickerShell';
@@ -119,7 +119,7 @@ export function ShopPicker({ onClose }: { onClose: () => void }) {
                   />
                 </div>
               )}
-              <FilmToggle checked={draftFilm} onChange={setDraftFilm} />
+              <WrapChoice film={draftFilm} onChange={setDraftFilm} />
             </div>
           </section>
 

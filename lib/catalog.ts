@@ -88,25 +88,25 @@ export type Flower = {
 
 const c = (id: string, name: string, hex: string): FlowerColor => ({ id, name, hex });
 
-/* ราคาเป็นตัวอย่าง แก้ได้ · ขนาดเทียบกับกุหลาบ (หัวกว้างราว 6–7 ซม.) */
+/* ราคาขายจริงของร้าน · ขนาดเทียบกับกุหลาบ (หัวกว้างราว 6–7 ซม.) */
 export const FLOWERS: Record<string, Flower> = {
   rose: {
-    name: 'กุหลาบ', en: 'Rose', price: 60, unit: 'ดอก', role: 'main', size: 0.9, stem: 'rose',
+    name: 'กุหลาบ', en: 'Rose', price: 29, unit: 'ดอก', role: 'main', size: 0.9, stem: 'rose',
     colors: [c('red', 'แดง', '#c8274a'), c('white', 'ขาว', '#f6f1e6')],
   },
-  sunflower: { name: 'ทานตะวัน', en: 'Sunflower', price: 80, unit: 'ดอก', role: 'main', size: 1.15, stem: 'sunflower', colors: [c('yellow', 'เหลือง', '#f6c514')] },
+  sunflower: { name: 'ทานตะวัน', en: 'Sunflower', price: 49, unit: 'ดอก', role: 'main', size: 1.15, stem: 'sunflower', colors: [c('yellow', 'เหลือง', '#f6c514')] },
   gerbera: {
-    name: 'เยอบีร่า', en: 'Gerbera', price: 45, unit: 'ดอก', role: 'main', size: 0.98, stem: 'gerbera',
-    colors: [c('lightpink', 'ชมพูอ่อน', '#f3c6d3'), c('red', 'แดง', '#e8411c'), c('orange', 'ส้ม', '#f7901e')],
+    name: 'เยอบีร่า', en: 'Gerbera', price: 30, unit: 'ดอก', role: 'main', size: 0.98, stem: 'gerbera',
+    colors: [c('lightpink', 'ชมพู', '#f3c6d3'), c('orange', 'ส้ม', '#f7901e')],
   },
   carnation: {
-    name: 'คาร์เนชัน', en: 'Carnation', price: 45, unit: 'ดอก', role: 'main', size: 0.72, stem: 'carnation',
-    colors: [c('pink', 'ชมพู', '#f28fb0'), c('red', 'แดง', '#b81d2c'), c('white', 'ขาวขอบชมพู', '#f7e9ee')],
+    name: 'คาร์เนชัน', en: 'Carnation', price: 20, unit: 'ดอก', role: 'main', size: 0.72, stem: 'carnation',
+    colors: [c('pink', 'ชมพู', '#f28fb0'), c('white', 'ขาว', '#f7e9ee')],
   },
 
-  gypsophila: { name: 'ยิปโซ', en: "Baby's breath", price: 40, unit: 'กำ', role: 'filler', size: 0.95, stem: 'spray', head: { base: [9, 69], turn: -72 }, colors: [c('white', 'ขาว', '#ffffff')] },
-  statice: { name: 'สแตติส', en: 'Statice', price: 35, unit: 'กำ', role: 'filler', size: 0.75, stem: 'spray', colors: [c('purple', 'ม่วง', '#7a62c9'), c('white', 'ขาว', '#eeeaf0')] },
-  daisy: { name: 'เดซี่', en: 'Daisy', price: 35, unit: 'ดอก', role: 'filler', size: 0.6, stem: 'gerbera', colors: [c('white', 'ขาว', '#ffffff')] },
+  gypsophila: { name: 'ยิปโซ', en: "Baby's breath", price: 25, unit: 'กำ', role: 'filler', size: 0.95, stem: 'spray', head: { base: [9, 69], turn: -72 }, colors: [c('white', 'ขาว', '#ffffff')] },
+  aster: { name: 'คลัสเตอร์', en: 'Aster', price: 15, unit: 'กำ', role: 'filler', size: 0.8, stem: 'spray', colors: [c('white', 'ขาว', '#ffffff')] },
+  caspia: { name: 'แคสเปีย', en: 'Caspia', price: 15, unit: 'กำ', role: 'filler', size: 0.75, stem: 'spray', colors: [c('purple', 'ม่วง', '#7a62c9')] },
 };
 
 export const sizeOf = (type: string) => FLOWERS[type]?.size ?? 0.9;
@@ -115,7 +115,13 @@ export const flowerImg = (type: string, color: string) => `/flowers/${type}-${co
 
 /* ---------- กระดาษห่อ / ริบบิ้น ---------- */
 export const WRAP_PRICE = 50; // ค่าห่อ + ริบบิ้น (ราคาตัวอย่าง)
-export const FILM_PRICE: number = 0; // ค่าฟิล์มใสห่อทับกระดาษ (0 = ไม่คิดเพิ่ม) — TODO: ใส่ราคาจริงถ้าคิดเพิ่ม
+export const FILM_PRICE: number = 5; // ค่าฟิล์มใสห่อทับกระดาษ (0 = ไม่คิดเพิ่ม)
+
+// การห่อ 2 แบบให้ลูกค้าเลือก (เก็บในออเดอร์เป็นค่า film: true/false)
+export const WRAP_STYLES = [
+  { film: false, name: 'กระดาษ', desc: 'กระดาษหนังสือพิมพ์ทรงบาน', image: '/wrap-paper.jpg' },
+  { film: true, name: 'ฟิล์มใส', desc: 'กระดาษทรงกรวย หุ้มฟิล์มใส', image: '/wrap-film.jpg' },
+] as const;
 
 // ร้านมีกระดาษหนังสือพิมพ์กับริบบิ้นขาวอย่างละแบบเดียว — มีตัวเลือกเดียว หน้าเว็บจะไม่แสดงตัวเลือก (แสดงเป็นข้อความแทน)
 // อยากเพิ่มสี: เพิ่มรายการต่อท้าย (ตัวที่ 0 = ค่าเริ่มต้น) แล้วตัวเลือกจะกลับมาเอง
@@ -167,11 +173,11 @@ export const TEMPLATES: Template[] = [
     ],
   },
   {
-    id: 'orange-gerbera', name: 'เยอบีร่าส้ม', desc: 'เยอบีร่าส้ม 2 ดอก แซมสแตติสม่วงและยิปโซ ห่อหนังสือพิมพ์',
+    id: 'orange-gerbera', name: 'เยอบีร่าส้ม', desc: 'เยอบีร่าส้ม 2 ดอก แซมแคสเปียม่วง ยิปโซ และคลัสเตอร์ ห่อหนังสือพิมพ์',
     paper: 0, ribbon: 0,
     items: [
-      ['statice', 'purple', 222, 140, 0], ['gypsophila', 'white', 256, 150, 12],
-      ['daisy', 'white', 148, 238, 0],
+      ['caspia', 'purple', 222, 140, 0], ['gypsophila', 'white', 256, 150, 12],
+      ['aster', 'white', 148, 238, 0],
       ['gerbera', 'orange', 182, 190, -6], ['gerbera', 'orange', 218, 244, 4],
     ],
   },

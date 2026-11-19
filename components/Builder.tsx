@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { baht, CONFIG, flowerImg, FLOWERS, PAPERS, RIBBONS, ROLES, summarize, templateDesign, TEMPLATES, type Item, type Role, type Template } from '@/lib/catalog';
 import { Bouquet3D, type Bouquet3DHandle } from './Bouquet3D';
 import { BouquetSvg } from './BouquetSvg';
-import { FilmToggle } from './FilmToggle';
+import { WrapChoice } from './WrapChoice';
 import { useBouquet } from './BouquetProvider';
 import { Icon } from './Icon';
 import { PickerShell } from './PickerShell';
@@ -269,7 +269,7 @@ export function Builder({ onClose }: { onClose: () => void }) {
                 items={RIBBONS.map(([name, hex], i) => ({ key: String(i), name, color: hex }))}
               />
             )}
-            <FilmToggle checked={b.draftFilm} onChange={b.setDraftFilm} />
+            <WrapChoice film={b.draftFilm} onChange={b.setDraftFilm} />
           </section>
 
           <section className="insp">

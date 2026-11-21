@@ -106,7 +106,7 @@ export const FLOWERS: Record<string, Flower> = {
 
   gypsophila: { name: 'ยิปโซ', en: "Baby's breath", price: 25, unit: 'กำ', role: 'filler', size: 0.95, stem: 'spray', head: { base: [9, 69], turn: -72 }, colors: [c('white', 'ขาว', '#ffffff')] },
   aster: { name: 'คลัสเตอร์', en: 'Aster', price: 15, unit: 'กำ', role: 'filler', size: 0.8, stem: 'spray', colors: [c('white', 'ขาว', '#ffffff')] },
-  caspia: { name: 'แคสเปีย', en: 'Caspia', price: 15, unit: 'กำ', role: 'filler', size: 0.75, stem: 'spray', colors: [c('purple', 'ม่วง', '#7a62c9')] },
+  caspia: { name: 'แคสเปีย', en: 'Caspia', price: 15, unit: 'กำ', role: 'filler', size: 1.15, stem: 'spray', colors: [c('purple', 'ม่วง', '#7a62c9')] },
   statice: { name: 'สแตติส', en: 'Statice', price: 15, unit: 'กำ', role: 'filler', size: 0.75, stem: 'spray', colors: [c('purple', 'ม่วง', '#5b3bb0')] },
 };
 
@@ -184,7 +184,7 @@ export const TEMPLATES: Template[] = [
     id: 'rose-carnation', name: 'กุหลาบ + คาร์เนชัน', desc: 'กุหลาบแดง 2 ดอก คาร์เนชันชมพู 2 ดอก แซมแคสเปีย สแตติสม่วง และยิปโซ ห่อหนังสือพิมพ์',
     paper: 0, ribbon: 0, photo: '/templates/rose-carnation.jpg',
     items: [
-      ['caspia', 'purple', 170, 140, -16], ['statice', 'purple', 246, 164, 14],
+      ['caspia', 'purple', 188, 120, -6], ['statice', 'purple', 246, 164, 14],
       ['gypsophila', 'white', 140, 228, -18], ['gypsophila', 'white', 262, 222, 16], ['gypsophila', 'white', 204, 186, 0],
       ['carnation', 'pink', 166, 214, -8], ['carnation', 'pink', 238, 206, 8],
       ['rose', 'red', 178, 262, -6], ['rose', 'red', 232, 266, 6],

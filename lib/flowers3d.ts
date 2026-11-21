@@ -319,36 +319,44 @@ function gypsophila(hex: string) {
 }
 
 /* ---------- สแตติส: ช่อกรวยกระดาษสีม่วง มีดอกจิ๋วสีขาวกลางกรวย ---------- */
-// แคสเปีย: กิ่งฝอยแตกแขนงหลายชั้น โปร่งกว่ายิปโซ ก้านเขียวเทา ดอกจิ๋วม่วงอ่อนปนขาวเกาะเป็นกระจุกที่ปลายกิ่ง
+/* แคสเปีย (Limonium): ก้านหลักเส้นเดียว แตกกิ่งข้างตลอดความยาว กิ่งย่อยหักซิกแซก แตกต่อได้อีกหลายชั้น
+   ดอกจิ๋ว (ม่วงอ่อนปนขาว) เกาะเรียงตามกิ่งชั้นสุดท้าย → รวมกันเป็นพุ่มฝอยฟู ไม่ใช่กระจุกที่ปลายกิ่ง */
 function caspia(hex: string) {
-  const m = new Mesher(), rnd = rng(53), lilac = col(hex), pale = light(col(hex), 0.65), deepC = deep(col(hex), 0.2), stemC = col('#7d8a6a');
+  const m = new Mesher(), rnd = rng(53), pale = light(col(hex), 0.65), lilac = col(hex), deepC = deep(col(hex), 0.2), stemC = col('#7d8a6a');
   const tones = [pale, pale, pale, lilac, deepC];
-  const sprig = (from: THREE.Vector3, dir: THREE.Vector3, len: number, level: number, thick: number) => {
-    const end = from.clone().addScaledVector(dir, len);
-    m.twig(from, end, thick, thick * 0.75, stemC);
-    if (level === 0) {
-      // กระจุกดอกจิ๋ว 3–5 ดอกรอบปลายกิ่ง
-      const n = 3 + Math.round(rnd() * 2);
-      for (let k = 0; k < n; k++) {
-        const p = end.clone().add(new THREE.Vector3(rnd() - 0.5, rnd() * 0.6, rnd() - 0.5).multiplyScalar(0.07));
-        m.solid(new THREE.IcosahedronGeometry(0.018 + rnd() * 0.012, 0), tones[Math.floor(rnd() * tones.length)], M4(p.x, p.y, p.z));
-      }
-      return;
-    }
-    const n = 2 + Math.round(rnd());
-    for (let i = 0; i < n; i++) {
-      const d = dir.clone().add(new THREE.Vector3(rnd() - 0.5, rnd() * 0.4, rnd() - 0.5).multiplyScalar(1.3)).normalize();
-      sprig(end, d, len * (0.55 + rnd() * 0.2), level - 1, thick * 0.72);
+  const jitter = (d: THREE.Vector3, k: number) => d.clone().add(new THREE.Vector3(rnd() - 0.5, (rnd() - 0.3) * 0.6, rnd() - 0.5).multiplyScalar(k)).normalize();
+  const florets = (a: THREE.Vector3, b: THREE.Vector3) => {
+    const n = 3 + Math.round(rnd() * 3);
+    for (let k = 0; k < n; k++) {
+      const p = a.clone().lerp(b, 0.25 + 0.75 * (k / n)).add(new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(0.05));
+      m.solid(new THREE.IcosahedronGeometry(0.014 + rnd() * 0.01, 0), tones[Math.floor(rnd() * tones.length)], M4(p.x, p.y, p.z));
     }
   };
-  for (let i = 0; i < 7; i++) {
-    const az = (i / 7) * TAU + rnd() * 0.6, lean = i === 0 ? 0.05 : 0.35 + rnd() * 0.45;
-    const d = new THREE.Vector3(Math.cos(az) * lean, 1, Math.sin(az) * lean).normalize();
-    sprig(new THREE.Vector3(0, 0.1 + rnd() * 0.3, 0), d, 0.36 + rnd() * 0.14, 3, 0.016);
-  }
-  m.twig(new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(0, 0.4, 0), 0.026, 0.02, stemC);
+  // กิ่งหนึ่งเส้น: เดินเป็นช่วงสั้นๆ หักทิศทีละนิด (ซิกแซก) และแตกกิ่งข้างที่แต่ละข้อ
+  const branch = (from: THREE.Vector3, dir: THREE.Vector3, len: number, level: number, thick: number) => {
+    const segs = level === 0 ? 2 : level === 3 ? 4 : 3;
+    let p = from.clone(), d = dir.clone();
+    for (let i = 0; i < segs; i++) {
+      const q = p.clone().addScaledVector(d, len / segs);
+      m.twig(p, q, thick, thick * 0.85, stemC);
+      if (level === 0) florets(p, q);
+      else {
+        // กิ่งข้างกางออก 1–2 กิ่งต่อข้อ หมุนรอบก้านไปเรื่อยๆ
+        for (let s2 = 0; s2 < (level >= 2 ? 2 : 1); s2++) {
+          const az = rnd() * TAU, out = new THREE.Vector3(Math.cos(az), 0, Math.sin(az));
+          const side = jitter(d.clone().multiplyScalar(0.8).addScaledVector(out, 1.1 + rnd() * 0.6), 0.3);
+          branch(q, side, len * (0.6 + rnd() * 0.2) * (1 - (i / segs) * 0.3), level - 1, thick * 0.65);
+        }
+      }
+      p = q;
+      d = jitter(d, 0.5);
+    }
+    if (level > 0) branch(p, jitter(d, 0.3), len * 0.4, level - 1, thick * 0.65); // ปลายกิ่ง
+  };
+  branch(new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(0, 1, 0), 0.9, 3, 0.022);
   return m.build();
 }
+
 function statice(hex: string, colorId: string) {
   const m = new Mesher(), rnd = rng(89), c = col(hex), stemC = col('#5f8c48');
   const rim = light(c, 0.2), dot = col(colorId === 'white' ? '#f1e39a' : '#ffffff');

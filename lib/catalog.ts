@@ -184,7 +184,7 @@ export const TEMPLATES: Template[] = [
     id: 'rose-carnation', name: 'กุหลาบ + คาร์เนชัน', desc: 'กุหลาบแดง 2 ดอก คาร์เนชันชมพู 2 ดอก แซมแคสเปีย สแตติสม่วง และยิปโซ ห่อหนังสือพิมพ์',
     paper: 0, ribbon: 0, photo: '/templates/rose-carnation.jpg',
     items: [
-      ['caspia', 'purple', 176, 128, -14], ['caspia', 'purple', 140, 172, -28], ['statice', 'purple', 246, 164, 14],
+      ['caspia', 'purple', 170, 140, -16], ['statice', 'purple', 246, 164, 14],
       ['gypsophila', 'white', 140, 228, -18], ['gypsophila', 'white', 262, 222, 16], ['gypsophila', 'white', 204, 186, 0],
       ['carnation', 'pink', 166, 214, -8], ['carnation', 'pink', 238, 206, 8],
       ['rose', 'red', 178, 262, -6], ['rose', 'red', 232, 266, 6],

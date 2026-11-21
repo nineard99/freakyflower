@@ -126,11 +126,13 @@ export const WRAP_STYLES: { id: WrapStyle; name: string; desc: string; image: st
 export const toWrapStyle = (v: unknown): WrapStyle => (v === 'cone' ? 'cone' : 'fan');
 export const wrapStyleName = (s?: WrapStyle) => (WRAP_STYLES.find((w) => w.id === s) ?? WRAP_STYLES[0]).name;
 
-// ร้านมีกระดาษหนังสือพิมพ์กับริบบิ้นขาวอย่างละแบบเดียว — มีตัวเลือกเดียว หน้าเว็บจะไม่แสดงตัวเลือก (แสดงเป็นข้อความแทน)
-// อยากเพิ่มสี: เพิ่มรายการต่อท้าย (ตัวที่ 0 = ค่าเริ่มต้น) แล้วตัวเลือกจะกลับมาเอง
+// ถ้ามีตัวเลือกเดียว หน้าเว็บจะไม่แสดงตัวเลือก (แสดงเป็นข้อความแทน)
+// อยากเพิ่มสี: เพิ่มรายการต่อท้ายเท่านั้น (ตัวที่ 0 = ค่าเริ่มต้น, index ถูกเก็บในลิงก์/ตะกร้า ห้ามสลับลำดับ)
 export type Paper = { name: string; kind: 'news' | 'matte'; color: string };
 export const PAPERS: Paper[] = [
   { name: 'หนังสือพิมพ์', kind: 'news', color: '#e4cfa6' },
+  { name: 'ครีม', kind: 'matte', color: '#f3e9d2' },
+  { name: 'ชมพูอ่อน', kind: 'matte', color: '#f6d5da' },
 ];
 export const RIBBONS: [string, string][] = [
   ['ขาว', '#ffffff'],

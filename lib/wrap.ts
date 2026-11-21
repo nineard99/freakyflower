@@ -76,14 +76,9 @@ function defs(uid: string, d: Design) {
     `<filter id="${uid}ps" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#3c1e3c" flood-opacity=".28"/></filter>` +
     `<linearGradient id="${uid}lf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7aaa58"/><stop offset="1" stop-color="#3a6729"/></linearGradient>` +
     `<filter id="${uid}pp" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3c2a1e" flood-opacity=".22"/></filter>` +
-    // รอยยับกระดาษ: noise แบบ turbulence (สันคม เหมือนกระดาษขยำ) → แสงเงาแบบนูน → แยกเป็นเงาดำ + ไฮไลต์ขาว ตัดตามรูปกระดาษ
-    `<filter id="${uid}cr" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">` +
-    `<feTurbulence type="turbulence" baseFrequency=".022 .014" numOctaves="2" seed="4" result="n"/>` +
-    `<feDiffuseLighting in="n" surfaceScale="3.2" diffuseConstant="1" lighting-color="#fff" result="l"><feDistantLight azimuth="215" elevation="58"/></feDiffuseLighting>` +
-    `<feColorMatrix in="l" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 1.95" result="dk"/>` +
-    `<feColorMatrix in="l" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.2 0 0 0 -1.95" result="hi"/>` +
-    `<feMerge result="m"><feMergeNode in="dk"/><feMergeNode in="hi"/></feMerge>` +
-    `<feComposite in="m" in2="SourceAlpha" operator="in"/></filter>` +
+    // รอยจีบเข้มตรงจุดรวบ แล้วจางหายก่อนถึงขอบบน (กระดาษบนๆ เรียบ)
+    `<linearGradient id="${uid}pf" gradientUnits="userSpaceOnUse" x1="0" y1="${TIE.y}" x2="0" y2="${TIE.y - 230}"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>` +
+    `<mask id="${uid}pm" maskUnits="userSpaceOnUse" x="0" y="0" width="${STAGE_W}" height="${STAGE_H}"><rect width="${STAGE_W}" height="${STAGE_H}" fill="url(#${uid}pf)"/></mask>` +
     `</defs>`;
 }
 
@@ -93,30 +88,26 @@ function paperFill(uid: string, d: Design, k: number) {
   return p.kind === 'news' ? `url(#${uid}np${k % 3})` : p.color;
 }
 
-/* รอยจีบ: กระดาษถูกรวบที่ริบบิ้น เลยมีรอยพับลากจากจุดรวบขึ้นไปหาขอบ
-   แต่ละเส้น = เงาเข้ม + เส้นสว่างชิดกัน (ดูเป็นสันพับ) โค้งเล็กน้อยแบบสุ่ม ตัดให้อยู่ในแผ่นด้วย clipPath */
+/* รอยจีบ: กระดาษถูกรวบที่ริบบิ้น เลยมีรอยพับนุ่มๆ ไม่กี่เส้นลากจากจุดรวบขึ้นไป จางลงเมื่อสูงขึ้น (mask pm)
+   แต่ละเส้น = แถบเงากว้างนุ่ม + เส้นสว่างบางข้างกัน ตัดให้อยู่ในแผ่นด้วย clipPath */
 function pleats(uid: string, tag: string, path: string) {
   const r = rng([...tag].reduce((h, c) => h * 31 + c.charCodeAt(0), 7) % 2147483646 + 1);
   const id = `${uid}cl${tag}`;
   let dk = '', hi = '';
-  for (let i = 0; i < 13; i++) {
-    const a = ((-66 + i * 11 + (r() - 0.5) * 8) * Math.PI) / 180; // มุมจากแนวตั้ง
-    const x0 = TIE.x + (r() - 0.5) * 10, y0 = TIE.y + 6;
-    const len = 380, x1 = x0 + Math.sin(a) * len, y1 = y0 - Math.cos(a) * len;
-    const bend = (r() - 0.5) * 34;
+  for (let i = 0; i < 6; i++) {
+    const a = ((-55 + i * 22 + (r() - 0.5) * 12) * Math.PI) / 180; // มุมจากแนวตั้ง
+    const x0 = TIE.x + (r() - 0.5) * 8, y0 = TIE.y + 4;
+    const len = 300, x1 = x0 + Math.sin(a) * len, y1 = y0 - Math.cos(a) * len;
+    const bend = (r() - 0.5) * 24;
     const cx = (x0 + x1) / 2 + bend * Math.cos(a), cy = (y0 + y1) / 2 + bend * Math.sin(a);
     const c = `M${f1(x0)} ${f1(y0)}Q${f1(cx)} ${f1(cy)} ${f1(x1)} ${f1(y1)}`;
-    const o = 0.12 + r() * 0.16, w = 0.7 + r() * 1.1;
+    const o = 0.06 + r() * 0.05, w = 3 + r() * 3;
     dk += `<path d="${c}" stroke-width="${f1(w)}" opacity="${o.toFixed(2)}"/>`;
-    hi += `<path d="${c}" transform="translate(${f1(1.1 + w * 0.6)} 0)" stroke-width="${f1(w * 0.8)}" opacity="${(o * 1.5).toFixed(2)}"/>`;
+    hi += `<path d="${c}" transform="translate(${f1(w * 0.5 + 0.6)} 0)" stroke-width="1" opacity="${(o * 3.5).toFixed(2)}"/>`;
   }
   return `<clipPath id="${id}"><path d="${path}"/></clipPath>` +
-    `<g clip-path="url(#${id})" fill="none" stroke-linecap="round"><g stroke="#2a1d12">${dk}</g><g stroke="#fff">${hi}</g></g>`;
+    `<g clip-path="url(#${id})"><g mask="url(#${uid}pm)" fill="none" stroke-linecap="round"><g stroke="#2a1d12">${dk}</g><g stroke="#fff">${hi}</g></g></g>`;
 }
-
-// รอยยับทั่วแผ่น: วาดครั้งเดียวต่อชั้น (filter noise หนัก เลยไม่ทำทีละแผ่น)
-const crinkle = (uid: string, paths: string[]) =>
-  `<g filter="url(#${uid}cr)" opacity=".55">${paths.map((p) => `<path d="${p}" fill="#fff"/>`).join('')}</g>`;
 
 function sheet(uid: string, d: Design, path: string, k: number, side = false, tag = '') {
   const p = PAPERS[d.paper] ?? PAPERS[0];
@@ -163,7 +154,6 @@ function coneBack(uid: string, d: Design) {
   }
   const back = `M${bl} ${by}L${lip.slice(1)}L${br} ${by}Z`;
   out += `<g filter="url(#${uid}pp)">${sheet(uid, d, back, 0, false, 'cb')}</g>`;
-  out += crinkle(uid, [back]);
   out += `<path d="${back}" fill="#3b2e22" fill-opacity=".1"/>`; // ด้านในกรวย เข้มกว่าเล็กน้อย
   return out + curl(lip, p.color);
 }
@@ -183,7 +173,6 @@ function coneFront(uid: string, d: Design) {
   out += sheet(uid, d, sA, 2, false, 'ca');
   out += sheet(uid, d, sB, 0, true, 'cf');
   out += '</g>';
-  out += crinkle(uid, [tail, sA, sB]);
   out += curl(topA, p.color) + curl(topB, p.color);
   if (d.film) {
     const fy = front - 40, fw = w(fy) + 14;
@@ -214,7 +203,6 @@ export function backLayer(uid: string, d: Design) {
   out += sheet(uid, d, sL, 1, true, 'bl');
   out += sheet(uid, d, sR, 2, true, 'br');
   out += '</g>';
-  out += crinkle(uid, [sC, sL, sR]);
   out += curl(cTop, p.color) + curl(lTop, p.color) + curl(rTop, p.color);
   return out;
 }
@@ -237,7 +225,6 @@ export function frontLayer(uid: string, d: Design) {
   out += sheet(uid, d, sM, 2, false, 'fm');
   out += sheet(uid, d, sF, 0, true, 'ff');
   out += '</g>';
-  out += crinkle(uid, [tail, sM, sF]);
   out += curl(mainTop, p.color) + curl(flapTop, p.color);
   // รอยพับ
   out += `<path d="M${TIE.x - 4} ${f1(F + 0.32 * drop)}L${TIE.x - 2} ${by}M${f1(TIE.x + 0.22 * W)} ${f1(F + 0.02 * drop)}L${br - 2} ${by}" stroke="${shade(p.color, -0.25)}" stroke-width=".8" opacity=".5" fill="none"/>`;

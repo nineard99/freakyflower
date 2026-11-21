@@ -15,6 +15,10 @@ export function PickerShell({ title, meta, onClose, actions, tool, children }: {
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // onClose เปลี่ยนตัวทุกครั้งที่ร่างเปลี่ยน — เก็บใน ref ไว้ ไม่ให้ effect ข้างล่างรันซ้ำ
+  // (ถ้ารันซ้ำจะดึงโฟกัสออกจากช่องที่พิมพ์อยู่ แป้นพิมพ์บนมือถือปิดทันที)
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -25,7 +29,7 @@ export function PickerShell({ title, meta, onClose, actions, tool, children }: {
     );
     behind.forEach((el) => el.setAttribute('inert', ''));
     // Esc ปิดหน้า — ยกเว้นตอนมี modal ยืนยันเปิดอยู่ (Esc นั้นเป็นของ modal)
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) closeRef.current(); };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
@@ -34,7 +38,7 @@ export function PickerShell({ title, meta, onClose, actions, tool, children }: {
       behind.forEach((el) => el.removeAttribute('inert'));
       prev?.focus?.({ preventScroll: true });
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div ref={ref} className={`picker${tool ? ' picker--tool' : ''}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>

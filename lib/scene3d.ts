@@ -61,6 +61,38 @@ function newsTexture(base: string) {
   return t;
 }
 
+// รอยยับกระดาษ (bump map): ริ้วแนวตั้ง (ตามแนวจีบที่ลากจากจุดรวบขึ้นขอบ) + จุดยับเล็กๆ
+function crinkleTexture() {
+  const S = 256, cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d')!;
+  g.fillStyle = '#808080';
+  g.fillRect(0, 0, S, S);
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * S, w = 1 + rnd() * 5, lean = (rnd() - 0.5) * 40, v = Math.round(60 + rnd() * 140);
+    g.strokeStyle = `rgba(${v},${v},${v},${(0.25 + rnd() * 0.4).toFixed(2)})`;
+    g.lineWidth = w;
+    for (const dx of [-S, 0, S]) { // วาดซ้ำซ้าย/ขวา ให้ต่อกันไร้รอยต่อ
+      g.beginPath();
+      g.moveTo(x + dx, -10);
+      g.quadraticCurveTo(x + dx + lean * 2, S / 2, x + dx + lean, S + 10);
+      g.stroke();
+    }
+  }
+  for (let i = 0; i < 260; i++) {
+    const v = Math.round(rnd() * 255);
+    g.fillStyle = `rgba(${v},${v},${v},.18)`;
+    g.beginPath();
+    g.ellipse(rnd() * S, rnd() * S, 2 + rnd() * 6, 6 + rnd() * 16, (rnd() - 0.5) * 0.6, 0, TAU);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
 function ringTexture() {
   const cv = document.createElement('canvas');
   cv.width = cv.height = 256;
@@ -96,12 +128,15 @@ function rimOf(items: Item[], cone = false): Rim {
   return { h, r: (th) => NECK + slope * h(th) * wave(th) };
 }
 
-function coneGeometry(rim: Rim, grow = 1, lift = 0) {
-  const N = 96, M = 6, pos: number[] = [], uv: number[] = [], idx: number[] = [];
+// fold = ความลึกรอยจีบ (0 = เรียบ ใช้กับฟิล์มใส): ผิวกรวยเป็นลอนตามแนวรวบ ลึกขึ้นเมื่อไกลจากจุดรวบ
+function coneGeometry(rim: Rim, grow = 1, lift = 0, fold = 1) {
+  const pleat = (th: number) =>
+    0.55 * Math.sin(13 * th + 0.4) + 0.3 * Math.sin(23 * th + 2.1) + 0.15 * Math.abs(Math.sin(7 * th + 1.2)) * 2 - 0.15;
+  const N = 192, M = 8, pos: number[] = [], uv: number[] = [], idx: number[] = [];
   for (let i = 0; i <= N; i++) {
     const th = (i / N) * TAU, R = rim.r(th) * grow, H = rim.h(th) + lift;
     for (let j = 0; j <= M; j++) {
-      const k = j / M, rad = NECK + (R - NECK) * k;
+      const k = j / M, rad = NECK + (R - NECK) * k + fold * pleat(th) * 6 * Math.pow(k, 0.8);
       pos.push(Math.sin(th) * rad, H * k, Math.cos(th) * rad);
       uv.push((i / N) * 4, (k * H) / 130);
     }
@@ -146,6 +181,7 @@ export function createScene3D(canvas: HTMLCanvasElement, handlers: Handlers): Sc
 
   const petalMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }); // ใช้ร่วมกันทุกดอก (สีอยู่ใน vertex)
   let news: [THREE.Texture, THREE.Texture] | null = null; // [ด้านนอก, ด้านใน]
+  const crinkle = crinkleTexture();
 
   const stemMats = new Map<StemKind, THREE.Material>();
   const stemMat = (kind: StemKind) => {
@@ -183,19 +219,20 @@ export function createScene3D(canvas: HTMLCanvasElement, handlers: Handlers): Sc
       inn.repeat.x = -1; // ด้านในมองจากอีกฝั่ง → กลับซ้ายขวาให้ตัวหนังสือไม่กลับด้าน
       news = [out, inn];
     }
-    const paperMat = new THREE.MeshLambertMaterial({ color: isNews ? '#ffffff' : paper.color, map: isNews ? news![0] : null });
-    const innerMat = new THREE.MeshLambertMaterial({ color: isNews ? '#efe9e2' : shade(paper.color, -0.07), map: isNews ? news![1] : null, side: THREE.BackSide });
+    const bump = { bumpMap: crinkle, bumpScale: 1.6 };
+    const paperMat = new THREE.MeshLambertMaterial({ color: isNews ? '#ffffff' : paper.color, map: isNews ? news![0] : null, ...bump });
+    const innerMat = new THREE.MeshLambertMaterial({ color: isNews ? '#efe9e2' : shade(paper.color, -0.07), map: isNews ? news![1] : null, side: THREE.BackSide, ...bump });
     const cone = coneGeometry(rim);
     mesh(cone, paperMat);
     bouquet.add(new THREE.Mesh(cone, innerMat));
     owned.push(innerMat);
     paperMat.side = THREE.FrontSide;
-    const tailMat = new THREE.MeshLambertMaterial({ color: paperMat.color, map: paperMat.map, side: THREE.DoubleSide });
+    const tailMat = new THREE.MeshLambertMaterial({ color: paperMat.color, map: paperMat.map, side: THREE.DoubleSide, ...bump });
     mesh(new THREE.CylinderGeometry(NECK, 27, 132, 40, 1, true), tailMat).position.y = -66;
     if (d.film) {
       // ห่อใส: วาดก่อนหัวดอก (ดอกไม่โดนฟิล์มขาวทับ) + เส้นขอบขาวให้เห็นว่ามีพลาสติก
       const cello = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false });
-      mesh(coneGeometry(rim, 1.07, 20), cello).renderOrder = -2;
+      mesh(coneGeometry(rim, 1.07, 20, 0.3), cello).renderOrder = -2;
       mesh(new THREE.CylinderGeometry(NECK + 3, 31, 138, 40, 1, true), cello, false).position.y = -69;
       const edge = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 96 }, (_, i) => {
         const th = (i / 96) * TAU, R = rim.r(th) * 1.07;
@@ -480,6 +517,7 @@ export function createScene3D(canvas: HTMLCanvasElement, handlers: Handlers): Sc
       petalMat.dispose();
       disposeFlowerModels();
       news?.forEach((t) => t.dispose());
+      crinkle.dispose();
       ringMap.dispose();
       ring.material.dispose();
       renderer.dispose();

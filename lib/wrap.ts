@@ -76,6 +76,14 @@ function defs(uid: string, d: Design) {
     `<filter id="${uid}ps" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#3c1e3c" flood-opacity=".28"/></filter>` +
     `<linearGradient id="${uid}lf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7aaa58"/><stop offset="1" stop-color="#3a6729"/></linearGradient>` +
     `<filter id="${uid}pp" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3c2a1e" flood-opacity=".22"/></filter>` +
+    // รอยยับกระดาษ: noise แบบ turbulence (สันคม เหมือนกระดาษขยำ) → แสงเงาแบบนูน → แยกเป็นเงาดำ + ไฮไลต์ขาว ตัดตามรูปกระดาษ
+    `<filter id="${uid}cr" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">` +
+    `<feTurbulence type="turbulence" baseFrequency=".022 .014" numOctaves="2" seed="4" result="n"/>` +
+    `<feDiffuseLighting in="n" surfaceScale="3.2" diffuseConstant="1" lighting-color="#fff" result="l"><feDistantLight azimuth="215" elevation="58"/></feDiffuseLighting>` +
+    `<feColorMatrix in="l" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 1.95" result="dk"/>` +
+    `<feColorMatrix in="l" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.2 0 0 0 -1.95" result="hi"/>` +
+    `<feMerge result="m"><feMergeNode in="dk"/><feMergeNode in="hi"/></feMerge>` +
+    `<feComposite in="m" in2="SourceAlpha" operator="in"/></filter>` +
     `</defs>`;
 }
 
@@ -85,9 +93,35 @@ function paperFill(uid: string, d: Design, k: number) {
   return p.kind === 'news' ? `url(#${uid}np${k % 3})` : p.color;
 }
 
-function sheet(uid: string, d: Design, path: string, k: number, side = false) {
+/* รอยจีบ: กระดาษถูกรวบที่ริบบิ้น เลยมีรอยพับลากจากจุดรวบขึ้นไปหาขอบ
+   แต่ละเส้น = เงาเข้ม + เส้นสว่างชิดกัน (ดูเป็นสันพับ) โค้งเล็กน้อยแบบสุ่ม ตัดให้อยู่ในแผ่นด้วย clipPath */
+function pleats(uid: string, tag: string, path: string) {
+  const r = rng([...tag].reduce((h, c) => h * 31 + c.charCodeAt(0), 7) % 2147483646 + 1);
+  const id = `${uid}cl${tag}`;
+  let dk = '', hi = '';
+  for (let i = 0; i < 13; i++) {
+    const a = ((-66 + i * 11 + (r() - 0.5) * 8) * Math.PI) / 180; // มุมจากแนวตั้ง
+    const x0 = TIE.x + (r() - 0.5) * 10, y0 = TIE.y + 6;
+    const len = 380, x1 = x0 + Math.sin(a) * len, y1 = y0 - Math.cos(a) * len;
+    const bend = (r() - 0.5) * 34;
+    const cx = (x0 + x1) / 2 + bend * Math.cos(a), cy = (y0 + y1) / 2 + bend * Math.sin(a);
+    const c = `M${f1(x0)} ${f1(y0)}Q${f1(cx)} ${f1(cy)} ${f1(x1)} ${f1(y1)}`;
+    const o = 0.12 + r() * 0.16, w = 0.7 + r() * 1.1;
+    dk += `<path d="${c}" stroke-width="${f1(w)}" opacity="${o.toFixed(2)}"/>`;
+    hi += `<path d="${c}" transform="translate(${f1(1.1 + w * 0.6)} 0)" stroke-width="${f1(w * 0.8)}" opacity="${(o * 1.5).toFixed(2)}"/>`;
+  }
+  return `<clipPath id="${id}"><path d="${path}"/></clipPath>` +
+    `<g clip-path="url(#${id})" fill="none" stroke-linecap="round"><g stroke="#2a1d12">${dk}</g><g stroke="#fff">${hi}</g></g>`;
+}
+
+// รอยยับทั่วแผ่น: วาดครั้งเดียวต่อชั้น (filter noise หนัก เลยไม่ทำทีละแผ่น)
+const crinkle = (uid: string, paths: string[]) =>
+  `<g filter="url(#${uid}cr)" opacity=".55">${paths.map((p) => `<path d="${p}" fill="#fff"/>`).join('')}</g>`;
+
+function sheet(uid: string, d: Design, path: string, k: number, side = false, tag = '') {
   const p = PAPERS[d.paper] ?? PAPERS[0];
   return `<path d="${path}" fill="${paperFill(uid, d, k)}" stroke="${shade(p.color, -0.2)}" stroke-width="1" stroke-linejoin="round"/>` +
+    (tag ? pleats(uid, tag, path) : '') +
     `<path d="${path}" fill="url(#${uid}${side ? 'sd' : 'sh'})"/>`;
 }
 
@@ -128,7 +162,8 @@ function coneBack(uid: string, d: Design) {
     out += `<path d="M${bl - 6} ${by + 4}L${f1(TIE.x - fw)} ${f1(ft + 30)}Q${TIE.x} ${f1(ft - 14)} ${f1(TIE.x + fw)} ${f1(ft + 12)}L${br + 6} ${by + 4}Z" fill="#fff" fill-opacity=".2" stroke="#fff" stroke-opacity=".85" stroke-width="1.2"/>`;
   }
   const back = `M${bl} ${by}L${lip.slice(1)}L${br} ${by}Z`;
-  out += `<g filter="url(#${uid}pp)">${sheet(uid, d, back, 0)}</g>`;
+  out += `<g filter="url(#${uid}pp)">${sheet(uid, d, back, 0, false, 'cb')}</g>`;
+  out += crinkle(uid, [back]);
   out += `<path d="${back}" fill="#3b2e22" fill-opacity=".1"/>`; // ด้านในกรวย เข้มกว่าเล็กน้อย
   return out + curl(lip, p.color);
 }
@@ -141,11 +176,14 @@ function coneFront(uid: string, d: Design) {
   // แผ่น A: จากขอบขวา (สูง) พันลงไปทางซ้าย · แผ่น B: จากขอบซ้ายพันทับลงไปทางขวา
   const topA = `M${f1(TIE.x + w(yA) + 2)} ${f1(yA)}Q${f1(TIE.x + 6)} ${f1(front + 4)} ${f1(TIE.x - w(yA2) * 0.8)} ${f1(yA2)}`;
   const topB = `M${f1(TIE.x - w(yB) - 2)} ${f1(yB)}Q${f1(TIE.x - 4)} ${f1(front + 30)} ${f1(TIE.x + w(yB2) * 0.55)} ${f1(yB2)}`;
+  const tail = `M${bl} ${by - 4}L${TIE.x - 24} 506Q${TIE.x} 512 ${TIE.x + 24} 506L${br} ${by - 4}Z`;
+  const sA = `${topA}L${bl} ${by}L${br} ${by}Z`, sB = `${topB}L${br} ${by}L${bl} ${by}Z`;
   let out = `<g filter="url(#${uid}pp)">`;
-  out += sheet(uid, d, `M${bl} ${by - 4}L${TIE.x - 24} 506Q${TIE.x} 512 ${TIE.x + 24} 506L${br} ${by - 4}Z`, 1, true);
-  out += sheet(uid, d, `${topA}L${bl} ${by}L${br} ${by}Z`, 2);
-  out += sheet(uid, d, `${topB}L${br} ${by}L${bl} ${by}Z`, 0, true);
+  out += sheet(uid, d, tail, 1, true);
+  out += sheet(uid, d, sA, 2, false, 'ca');
+  out += sheet(uid, d, sB, 0, true, 'cf');
   out += '</g>';
+  out += crinkle(uid, [tail, sA, sB]);
   out += curl(topA, p.color) + curl(topB, p.color);
   if (d.film) {
     const fy = front - 40, fw = w(fy) + 14;
@@ -168,11 +206,15 @@ export function backLayer(uid: string, d: Design) {
   if (d.film) {
     out += `<path d="M${bl - 6} ${by + 4}L${f1(L - 14)} ${f1(T + 0.32 * H)}L${f1(L + 0.12 * W)} ${f1(T - 16)}Q${TIE.x} ${f1(T - 34)} ${f1(R - 0.12 * W)} ${f1(T - 16)}L${f1(R + 14)} ${f1(T + 0.32 * H)}L${br + 6} ${by + 4}Z" fill="#fff" fill-opacity=".2" stroke="#fff" stroke-opacity=".85" stroke-width="1.2"/>`;
   }
+  const sC = `M${bl} ${by}L${cTop.slice(1)}L${br} ${by}Z`;
+  const sL = `M${br} ${by}L${lTop.slice(1)}L${bl + 8} ${by}Z`;
+  const sR = `M${bl} ${by}L${rTop.slice(1)}L${br - 8} ${by}Z`;
   out += `<g filter="url(#${uid}pp)">`;
-  out += sheet(uid, d, `M${bl} ${by}L${cTop.slice(1)}L${br} ${by}Z`, 0);
-  out += sheet(uid, d, `M${br} ${by}L${lTop.slice(1)}L${bl + 8} ${by}Z`, 1, true);
-  out += sheet(uid, d, `M${bl} ${by}L${rTop.slice(1)}L${br - 8} ${by}Z`, 2, true);
+  out += sheet(uid, d, sC, 0, false, 'bc');
+  out += sheet(uid, d, sL, 1, true, 'bl');
+  out += sheet(uid, d, sR, 2, true, 'br');
   out += '</g>';
+  out += crinkle(uid, [sC, sL, sR]);
   out += curl(cTop, p.color) + curl(lTop, p.color) + curl(rTop, p.color);
   return out;
 }
@@ -188,12 +230,14 @@ export function frontLayer(uid: string, d: Design) {
   const mainTop = `M${f1(L + 0.05 * W)} ${f1(F - 0.05 * H)}Q${TIE.x} ${f1(F + 0.3 * drop)} ${f1(R - 0.05 * W)} ${f1(F - 0.05 * H)}`;
   const flapTop = `M${f1(L + 0.02 * W)} ${f1(F + 0.04 * H)}L${f1(TIE.x + 0.14 * W)} ${f1(F + 0.6 * drop)}`;
 
+  const tail = `M${bl} ${by - 4}L${TIE.x - 26} 506Q${TIE.x} 512 ${TIE.x + 26} 506L${br} ${by - 4}Z`; // หางกระดาษใต้ริบบิ้น
+  const sM = `${mainTop}L${br} ${by}L${bl} ${by}Z`, sF = `${flapTop}L${br} ${by}L${bl} ${by}Z`;
   let out = `<g filter="url(#${uid}pp)">`;
-  // หางกระดาษใต้ริบบิ้น
-  out += sheet(uid, d, `M${bl} ${by - 4}L${TIE.x - 26} 506Q${TIE.x} 512 ${TIE.x + 26} 506L${br} ${by - 4}Z`, 1, true);
-  out += sheet(uid, d, `${mainTop}L${br} ${by}L${bl} ${by}Z`, 2);
-  out += sheet(uid, d, `${flapTop}L${br} ${by}L${bl} ${by}Z`, 0, true);
+  out += sheet(uid, d, tail, 1, true);
+  out += sheet(uid, d, sM, 2, false, 'fm');
+  out += sheet(uid, d, sF, 0, true, 'ff');
   out += '</g>';
+  out += crinkle(uid, [tail, sM, sF]);
   out += curl(mainTop, p.color) + curl(flapTop, p.color);
   // รอยพับ
   out += `<path d="M${TIE.x - 4} ${f1(F + 0.32 * drop)}L${TIE.x - 2} ${by}M${f1(TIE.x + 0.22 * W)} ${f1(F + 0.02 * drop)}L${br - 2} ${by}" stroke="${shade(p.color, -0.25)}" stroke-width=".8" opacity=".5" fill="none"/>`;

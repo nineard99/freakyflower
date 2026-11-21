@@ -364,6 +364,7 @@ const MODELS: Record<string, Model> = {
   carnation: { make: carnation, sink: 0.4, neck: 0.5 },
   gypsophila: { make: gypsophila, sink: 0.85, neck: 0.05 },
   caspia: { make: statice, sink: 0.75, neck: 0.05 }, // แคสเปีย ทรงพุ่มเดียวกับสแตติส
+  statice: { make: statice, sink: 0.75, neck: 0.05 },
 };
 
 const cache = new Map<string, THREE.BufferGeometry>();

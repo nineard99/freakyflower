@@ -319,6 +319,36 @@ function gypsophila(hex: string) {
 }
 
 /* ---------- สแตติส: ช่อกรวยกระดาษสีม่วง มีดอกจิ๋วสีขาวกลางกรวย ---------- */
+// แคสเปีย: กิ่งฝอยแตกแขนงหลายชั้น โปร่งกว่ายิปโซ ก้านเขียวเทา ดอกจิ๋วม่วงอ่อนปนขาวเกาะเป็นกระจุกที่ปลายกิ่ง
+function caspia(hex: string) {
+  const m = new Mesher(), rnd = rng(53), lilac = col(hex), pale = light(col(hex), 0.65), deepC = deep(col(hex), 0.2), stemC = col('#7d8a6a');
+  const tones = [pale, pale, pale, lilac, deepC];
+  const sprig = (from: THREE.Vector3, dir: THREE.Vector3, len: number, level: number, thick: number) => {
+    const end = from.clone().addScaledVector(dir, len);
+    m.twig(from, end, thick, thick * 0.75, stemC);
+    if (level === 0) {
+      // กระจุกดอกจิ๋ว 3–5 ดอกรอบปลายกิ่ง
+      const n = 3 + Math.round(rnd() * 2);
+      for (let k = 0; k < n; k++) {
+        const p = end.clone().add(new THREE.Vector3(rnd() - 0.5, rnd() * 0.6, rnd() - 0.5).multiplyScalar(0.07));
+        m.solid(new THREE.IcosahedronGeometry(0.018 + rnd() * 0.012, 0), tones[Math.floor(rnd() * tones.length)], M4(p.x, p.y, p.z));
+      }
+      return;
+    }
+    const n = 2 + Math.round(rnd());
+    for (let i = 0; i < n; i++) {
+      const d = dir.clone().add(new THREE.Vector3(rnd() - 0.5, rnd() * 0.4, rnd() - 0.5).multiplyScalar(1.3)).normalize();
+      sprig(end, d, len * (0.55 + rnd() * 0.2), level - 1, thick * 0.72);
+    }
+  };
+  for (let i = 0; i < 7; i++) {
+    const az = (i / 7) * TAU + rnd() * 0.6, lean = i === 0 ? 0.05 : 0.35 + rnd() * 0.45;
+    const d = new THREE.Vector3(Math.cos(az) * lean, 1, Math.sin(az) * lean).normalize();
+    sprig(new THREE.Vector3(0, 0.1 + rnd() * 0.3, 0), d, 0.36 + rnd() * 0.14, 3, 0.016);
+  }
+  m.twig(new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(0, 0.4, 0), 0.026, 0.02, stemC);
+  return m.build();
+}
 function statice(hex: string, colorId: string) {
   const m = new Mesher(), rnd = rng(89), c = col(hex), stemC = col('#5f8c48');
   const rim = light(c, 0.2), dot = col(colorId === 'white' ? '#f1e39a' : '#ffffff');
@@ -363,7 +393,7 @@ const MODELS: Record<string, Model> = {
   aster: { make: daisy, sink: 0.05, neck: 0.1 }, // คลัสเตอร์ = ช่อดอกเล็กทรงเดซี่
   carnation: { make: carnation, sink: 0.4, neck: 0.5 },
   gypsophila: { make: gypsophila, sink: 0.85, neck: 0.05 },
-  caspia: { make: statice, sink: 0.75, neck: 0.05 }, // แคสเปีย ทรงพุ่มเดียวกับสแตติส
+  caspia: { make: caspia, sink: 0.8, neck: 0.05 },
   statice: { make: statice, sink: 0.75, neck: 0.05 },
 };
 
